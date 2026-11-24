@@ -1,0 +1,77 @@
+# Gabugu Platform 顶层 .gitignore —— 防止任何凭据、私钥、数据库导出、本地运维状态进入仓库
+
+# === 凭据、密钥与环境配置 ===
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+**/*.env
+!platform/deploy/.env.example
+**/*.enc
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.crt
+**/*.cer
+**/id_rsa*
+**/id_ed25519*
+**/api_keys.json
+**/api_keys.json.*
+**/api_keys.*.bak*
+**/api_keys.enc
+**/provider_presets.json
+**/cliproxy.env
+**/cliproxy.json
+**/*relay*.env
+**/secrets.*
+**/credentials.*
+
+# === 数据库导出、备份与本地运行时状态 ===
+**/*.dump
+**/*.sql.gz
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+**/*.bak
+**/*.bak.*
+**/*.backup
+platform/backend/.env.production
+platform/backend/backups/
+platform/backend/.deploy-state/
+platform/backend/data/
+
+# === 私有运维基线与发版现场（放在独立私有运维仓库，严禁混入本代码库） ===
+platform/deploy/production-source.json
+platform/deploy/source-manifests/
+platform/deploy/releases/
+platform/deploy/OPS_CHECKLIST*.md
+platform/deploy/PRODUCTION_RELEASE_*.md
+platform/deploy/PRODUCTION_FRONTEND_RELEASE_*.md
+**/private/
+**/live-data/
+
+# === 浏览器抓包 / Agent 会话日志 / 临时调试产物 ===
+.playwright-cli/
+.agent-logs/
+.omx/
+.grok/
+**/edge-profile/
+**/harvest_report.json
+**/test-results/
+**/test-results-*/
+platform/frontend/e2e/artifacts/
+platform/design-candidates/
+
+# === 日志、缓存与编译产物 ===
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.venv/
+**/*.log
+**/*.exe
+**/audit.json
+platform/backend/api_key
+platform/backend/base_url*

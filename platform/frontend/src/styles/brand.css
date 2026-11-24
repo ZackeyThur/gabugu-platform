@@ -1,0 +1,145 @@
+@import './workspace-fonts.css';
+
+@font-face {
+  font-family: Inter;
+  src: url('/brand/inter-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* 浅色 = #F2E8DB 暖米色体系，与 style.css 的 --gray-* / --c-white 同源；深色值保持独立。 */
+:root {
+  --g-bg: #f2e8db;
+  --g-surface: #fbf7f0;
+  --g-surface-raised: #e8dbc8;
+  --g-text: #221d17;
+  --g-muted: #6a6052;
+  --g-border: #dacbb4;
+  --g-accent: #2d5890;
+  --g-accent-soft: #eaece9;
+  --g-hover: #e8dbc8;
+  --g-radius: 12px;
+  color-scheme: light;
+}
+.dark {
+  --g-bg: #0b0f1a;
+  --g-surface: #151d30;
+  --g-surface-raised: #222d44;
+  --g-text: #eef2fb;
+  --g-muted: #8d9ebc;
+  --g-border: rgba(176, 204, 255, 0.11);
+  --g-accent: #7ca2ff;
+  --g-accent-soft: rgba(86, 130, 245, 0.16);
+  --g-hover: #1e2942;
+  color-scheme: dark;
+}
+
+body, .g-shell, .modal-overlay, .select-dropdown-portal, .gabugu-chart-tooltip {
+  font-family: Inter, 'Gabugu Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.g-shell { letter-spacing: 0; }
+.g-shell main { animation: g-content-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.g-shell main > * { min-width: 0; }
+@keyframes g-content-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Signature editorial motion primitives */
+@keyframes g-stagger-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes g-bar-sweep-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes g-bar-sweep-y {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes g-radar-ping {
+  0% { transform: scale(1); opacity: 0.65; }
+  75%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+.g-stagger-in {
+  animation: g-stagger-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--stagger-i, 0) * 55ms);
+}
+
+.g-live-dot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.g-live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: g-radar-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.g-hover-arrow svg {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.g-hover-arrow:hover svg {
+  transform: translateX(3px);
+}
+.g-shell .text-xs, .modal-overlay .text-xs, .select-dropdown-portal .text-xs { font-size: 13px; line-height: 1.5; }
+.g-shell .font-sans { font-family: inherit; }
+.g-shell .sidebar-logo { border-radius: 0; box-shadow: none; }
+
+
+/* Compatibility utilities for the gateway's additional operational pages. */
+.g-page { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.g-page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.g-page-title { color: var(--g-text); font-size: 24px; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+.g-page-desc { margin-top: 8px; font-size: 14px; color: var(--g-muted); line-height: 1.6; }
+.g-eyebrow { margin-bottom: 8px; font-size: 13px; color: var(--g-muted); }
+.g-panel {
+  position: relative;
+  border: 0;
+  border-radius: 20px;
+  background-image: var(--ui-card-grad);
+  box-shadow: var(--ui-shadow-card);
+}
+.g-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: var(--ui-rim-light);
+  pointer-events: none;
+}
+.g-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.g-code { background: #0f1524; color: #d4def0; border: 1px solid rgba(176, 204, 255, 0.12); border-radius: 12px; font-family: ui-monospace, Consolas, monospace; }
+.g-skip-link { position: fixed; top: 12px; left: 12px; transform: translateY(-180%); z-index: 100; background: var(--g-accent); color: white; padding: 12px 20px; border-radius: 8px; }
+.g-skip-link:focus { transform: translateY(0); }
+
+.g-setup { background: var(--g-bg); padding-block: 48px; }
+.g-key-usage, .g-legal { background: var(--g-bg); color: var(--g-text); }
+.g-key-usage main { padding-top: 60px; }
+.g-legal article { background: var(--g-surface); border: 1px solid var(--g-border); border-radius: 12px; padding: clamp(20px, 4vw, 48px); }
+
+@media (max-width: 639px) {
+  .g-shell .input, .g-shell select, .g-shell textarea,
+  .modal-overlay .input, .modal-overlay select, .modal-overlay textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+
+/* Keep the native version control usable when a build carries a long revision. */
+.g-shell .sidebar-brand > .relative > button { max-width: 100%; }
+.g-shell .sidebar-brand > .relative > button > .font-medium { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Only the bundled mark changes tone; administrator-uploaded logos retain their rendering. */
+html.dark img[src='/logo.svg'] { content: url('/brand/gabugu-logo-dark.png'); }

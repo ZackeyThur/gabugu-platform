@@ -1,0 +1,3 @@
+# The production manifests require original source and binary bytes.
+# Preserve intentional CRLF as well as LF; never normalize imported assets.
+* -text

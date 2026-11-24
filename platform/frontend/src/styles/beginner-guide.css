@@ -1,0 +1,1106 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   新手引导 · 排版系统
+   中文正文 17px / 28px，自然字距；标题、正文、辅助说明、按钮形成四档字阶。
+   所有数值围绕 4px 基线网格，左右留白与标题、步骤编号、正文共用一条左轴。
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.guide-layout {
+  --guide-canvas: #f2e8db;
+  --guide-surface: #fbf7f0;
+  --guide-text: #221d17;
+  --guide-muted: #6a6052;
+  --guide-faint: #857a6a;
+  --guide-border: #dacbb4;
+  --guide-border-strong: #c6b59b;
+  --guide-soft: #f3e3d8;
+  --guide-accent: #2d5890;
+  --guide-accent-text: #24477a;
+  --guide-success: #1f7a5c;
+  --guide-warn: #9a5b16;
+
+  /* 字阶：桌面 */
+  --guide-fs-display: 54px;
+  --guide-fs-h2: 34px;
+  --guide-fs-h3: 21px;
+  --guide-fs-body: 17px;
+  --guide-fs-small: 15px;
+  --guide-fs-caption: 13.5px;
+  --guide-fs-micro: 12.5px;
+
+  --guide-lh-display: 1.24;
+  --guide-lh-h2: 1.32;
+  --guide-lh-h3: 1.4;
+  --guide-lh-body: 28px;
+
+  /* 左轴：步骤编号徽标 36 + 间距 16 */
+  --guide-rail: 52px;
+  --guide-gutter: 72px;
+  /* 两个宽度令牌，按「内容的角色」分，不按各自字号算。
+     用 em 会让同一句「43em」在 17px 正文得 731px、在 15px 提示框得 645px、
+     在 13.5px 小注得 580.5px —— 意图是统一的，渲染出来右边缘是散的。
+     改成 px 之后，不同字号的段落共享同一条右边线。
+     measure：连续成段的阅读文本，612px ≈ 17px 中文 36 字/行，回读不串行。
+     panel：整块的面板与交互件（终端、提示句、提示框、结果行、截图组）。 */
+  --guide-measure: 612px;
+  --guide-panel: 731px;
+
+  background: var(--guide-canvas) !important;
+}
+.dark .guide-layout {
+  --guide-canvas: #0c111a;
+  --guide-surface: #151c27;
+  --guide-text: #edf0f5;
+  --guide-muted: #a3adbb;
+  --guide-faint: #7d8794;
+  --guide-border: #28313e;
+  --guide-border-strong: #364252;
+  --guide-soft: #182538;
+  --guide-accent: #7fb0ff;
+  --guide-accent-text: #9cc4ff;
+  --guide-success: #7ec9ac;
+  --guide-warn: #e0b073;
+}
+.guide-layout :deep(.bg-mesh-gradient) { display: none; }
+
+/* ── 页面骨架 ─────────────────────────────────────────────────────────────── */
+.beginner-guide {
+  max-width: 1300px;
+  margin-inline: auto;
+  color: var(--guide-text);
+  font-family: 'Inter', 'Gabugu Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: var(--guide-fs-body);
+  font-weight: 400;
+  line-height: var(--guide-lh-body);
+  letter-spacing: normal;
+  font-feature-settings: 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* 中英文、数字与中文标点之间自动留 1/4 字宽的间隙。
+     这一页到处是「CC Switch 帮你」「API 密钥」这类混排，
+     不靠手写空格，交给引擎按字面自动处理；不支持的浏览器退化为现状。 */
+  text-autospace: normal;
+  /* 中文标点挤压：行首不重复留白，行尾句号/逗号收缩到半个字宽 */
+  text-spacing-trim: space-first;
+  font-variant-east-asian: proportional-width;
+}
+.beginner-guide :is(h2, h3, p, figure, fieldset, ol, ul) { margin: 0; }
+.beginner-guide :is(h2, h3) { font-weight: 600; letter-spacing: normal; text-wrap: balance; }
+.beginner-guide :is(button, a, summary) { -webkit-tap-highlight-color: transparent; }
+.beginner-guide :is(a, button, summary):focus-visible {
+  outline: 2px solid var(--guide-accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.beginner-guide :is(button, a) > svg { flex-shrink: 0; }
+
+/* ── 首屏 ─────────────────────────────────────────────────────────────────── */
+.guide-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 46%);
+  align-items: center;
+  gap: 56px;
+  padding: 56px 0 48px;
+}
+.guide-hero-copy { min-width: 0; }
+
+.guide-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: normal;
+}
+.guide-eyebrow > span {
+  color: var(--guide-accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* 中文标题不加负字距；Inter 无中文字形，回退链显式声明保证字重稳定 */
+.guide-hero h2 {
+  margin-top: 18px;
+  font-size: var(--guide-fs-display);
+  line-height: var(--guide-lh-display);
+  letter-spacing: normal;
+  font-weight: 600;
+}
+.guide-hero .guide-intro {
+  max-width: 520px;
+  margin-top: 20px;
+  color: var(--guide-muted);
+  font-size: 17.5px;
+  line-height: 31px;
+}
+
+.guide-hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+/* 主副按钮同高同圆角，形成一组 */
+.guide-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: var(--guide-fs-small);
+  line-height: 22px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.guide-button svg { width: 16px; height: 16px; }
+.guide-button-primary {
+  color: #fff;
+  background: #2d5890;
+  border: 1px solid #2d5890;
+  box-shadow: 0 1px 2px rgb(45 88 144 / 0.2);
+}
+.guide-button-primary:hover { background: #24477a; border-color: #24477a; }
+.dark .guide-button-primary { background: #2f6fd0; border-color: #2f6fd0; }
+.dark .guide-button-primary:hover { background: #3c7cdd; border-color: #3c7cdd; }
+
+/* 副按钮：同高但去掉前进箭头与实心，用文字链接建立第二层。
+   两个「→」并存会让新手犹豫该点哪个。 */
+.guide-hero-actions .guide-text-link {
+  height: 46px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--guide-accent-text);
+  font-size: var(--guide-fs-small);
+  line-height: 22px;
+  font-weight: 500;
+  text-decoration: none;
+  text-underline-offset: 5px;
+}
+.guide-hero-actions .guide-text-link:hover { text-decoration: underline; }
+.guide-hero-actions .guide-text-link svg { display: none; }
+
+/* 正文内联链接 */
+.guide-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--guide-accent-text);
+  font-size: var(--guide-fs-small);
+  line-height: 24px;
+  font-weight: 500;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+.guide-text-link:hover { text-decoration: underline; }
+.guide-text-link svg { width: 14px; height: 14px; }
+
+/* ── 学习路线 ─────────────────────────────────────────────────────────────── */
+.beginner-guide .guide-journey {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  margin: 0 0 72px;
+  border-block: 1px solid var(--guide-border);
+  list-style: none;
+}
+.guide-journey li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px 20px 18px 0;
+}
+.guide-journey li + li { padding-left: 24px; border-left: 1px solid var(--guide-border); }
+/* 数字做成步骤徽标：与下方步骤编号同构，不再退化成脚注序号 */
+.journey-number {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--guide-border-strong);
+  border-radius: 8px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-micro);
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+/* 第一步即入口：实心强调，给「从哪开始」一个明确落点 */
+.guide-journey li:first-child .journey-number {
+  border-color: var(--guide-accent);
+  background: var(--guide-accent);
+  color: #fff;
+}
+.journey-label {
+  color: var(--guide-text);
+  font-size: 15.5px;
+  line-height: 24px;
+  font-weight: 450;
+  min-width: 0;
+}
+.guide-journey svg {
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: var(--guide-border-strong);
+  opacity: 1;
+}
+
+/* ── 主体两栏 ─────────────────────────────────────────────────────────────── */
+.guide-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 188px;
+  gap: var(--guide-gutter);
+  align-items: start;
+}
+.guide-content { min-width: 0; }
+.guide-section { margin-bottom: 96px; scroll-margin-top: 120px; }
+
+.guide-section-heading { margin-bottom: 32px; }
+.guide-section-heading h2 {
+  margin-top: 12px;
+  font-size: var(--guide-fs-h2);
+  line-height: var(--guide-lh-h2);
+}
+.guide-section-heading > p:last-child {
+  max-width: var(--guide-measure);
+  margin-top: 14px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-body);
+  line-height: var(--guide-lh-body);
+}
+
+.beginner-guide .guide-subtitle {
+  margin: 56px 0 20px;
+  font-size: 23px;
+  line-height: 1.35;
+}
+
+/* ── 术语 ─────────────────────────────────────────────────────────────────── */
+.guide-glossary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+  border-top: 1px solid var(--guide-border);
+}
+.guide-glossary details { border-bottom: 1px solid var(--guide-border); }
+.guide-glossary summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  font-size: 16px;
+  line-height: 26px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+.guide-glossary summary::-webkit-details-marker { display: none; }
+.guide-glossary summary svg {
+  width: 16px;
+  height: 16px;
+  color: var(--guide-faint);
+  flex-shrink: 0;
+  transition: transform 0.18s;
+}
+.guide-glossary details[open] summary svg { transform: rotate(45deg); }
+.guide-glossary p {
+  padding: 0 0 20px;
+  color: var(--guide-muted);
+  font-size: 16px;
+  line-height: 27px;
+}
+
+/* ── 图片组 ───────────────────────────────────────────────────────────────── */
+/* 配置图与操作入口并排，手机端回落单列。 */
+.guide-media-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: var(--guide-panel);
+  align-items: start;
+}
+.guide-media-pair .guide-media { width: 100%; max-width: none; }
+.guide-connect-tools { display: grid; gap: 20px; min-width: 0; }
+.guide-media-pair .guide-media-open,
+.guide-media-pair figcaption { max-width: none; }
+/* 截图是操作证据：两图并排时给足高度，关键控件仍可辨认 */
+.guide-media-pair .guide-media-open img { max-height: 260px; }
+
+/* 单张图片与正文同轴，宽度跟随正文测度 */
+.guide-step-content > .guide-media { width: 100%; max-width: var(--guide-measure); }
+
+/* ── 选择器 ───────────────────────────────────────────────────────────────── */
+.guide-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px 40px;
+  padding: 22px 24px;
+  border: 1px solid var(--guide-border);
+  border-radius: 14px;
+  background: var(--guide-surface);
+}
+.guide-selectors fieldset { flex: 1 1 260px; min-width: 0; padding: 0; border: 0; }
+.guide-selectors legend {
+  padding: 0 0 10px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 20px;
+  font-weight: 500;
+}
+.guide-segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--guide-border);
+  border-radius: 10px;
+  background: var(--guide-canvas);
+}
+.guide-segmented button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--guide-muted);
+  font-family: inherit;
+  font-size: var(--guide-fs-small);
+  line-height: 22px;
+  font-weight: 450;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.guide-segmented button:hover { color: var(--guide-text); }
+.guide-segmented button[aria-pressed='true'] {
+  background: var(--guide-surface);
+  color: var(--guide-text);
+  font-weight: 550;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.08), 0 0 0 1px var(--guide-border);
+}
+.guide-segmented button svg { width: 15px; height: 15px; }
+.guide-segmented button span { min-width: 0; }
+.guide-segmented button[aria-pressed='true'] svg { color: var(--guide-accent); }
+
+.guide-client-description {
+  margin-top: 14px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-small);
+  line-height: 25px;
+}
+
+/* ── 步骤 ─────────────────────────────────────────────────────────────────── */
+.guide-steps { padding: 0; margin: 8px 0 0; list-style: none; }
+
+.guide-step {
+  padding: 32px 0;
+  border-bottom: 1px solid var(--guide-border);
+}
+.guide-step:last-child { border-bottom: 0; padding-bottom: 0; }
+
+/* 编号 36 + 间距 16 = 52，与 --guide-rail 同值：
+   标题起点和正文左边缘严格共线，不再差 2px */
+.guide-step-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.guide-step-number {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--guide-soft);
+  color: var(--guide-accent-text);
+  font-size: var(--guide-fs-small);
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.guide-step-header h3 {
+  font-size: var(--guide-fs-h3);
+  line-height: var(--guide-lh-h3);
+}
+
+/* 正文与编号共用左轴：编号 36 + 间距 16 = 52 */
+.guide-step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding-left: var(--guide-rail);
+  min-width: 0;
+}
+/* 36em ≈ 36 个中文字/行，回读时不易串行 */
+.guide-step-content > p {
+  max-width: var(--guide-measure);
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-body);
+  line-height: var(--guide-lh-body);
+}
+
+.guide-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.guide-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--guide-border-strong);
+  border-radius: 9px;
+  background: var(--guide-surface);
+  color: var(--guide-text);
+  font-size: var(--guide-fs-caption);
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.guide-link-button svg { width: 14px; height: 14px; }
+.guide-link-button:hover { border-color: var(--guide-accent); color: var(--guide-accent-text); }
+
+.guide-step-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding-top: 2px;
+  color: var(--guide-muted);
+  max-width: var(--guide-panel);
+}
+.guide-step-result svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 5px;
+  flex-shrink: 0;
+  color: var(--guide-success);
+}
+.guide-step-result p { font-size: var(--guide-fs-caption); line-height: 24px; }
+.guide-step-result p > span {
+  margin-right: 8px;
+  color: var(--guide-text);
+  font-weight: 550;
+}
+
+/* 提示框：与正文同宽同轴 */
+.guide-install-note,
+.guide-callout {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: var(--guide-panel);
+  padding: 15px 17px;
+  border: 1px solid var(--guide-border);
+  border-left: 2px solid var(--guide-accent);
+  border-radius: 10px;
+  background: var(--guide-soft);
+  color: var(--guide-text);
+  font-size: var(--guide-fs-small);
+  line-height: 25px;
+}
+.guide-install-note svg,
+.guide-callout svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  color: var(--guide-accent);
+}
+
+/* 已选工具 */
+.guide-selected-tool {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: var(--guide-panel);
+}
+.guide-tool-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border: 1px solid var(--guide-border);
+  border-radius: 12px;
+  background: var(--guide-surface);
+}
+.guide-tool-mark svg { width: 22px; height: 22px; }
+.guide-tool-mark.claude { color: #bf7a58; }
+.guide-selected-tool strong { font-size: 17px; line-height: 26px; font-weight: 600; }
+.guide-selected-tool p {
+  margin-top: 3px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 23px;
+}
+
+/* 示范卡片 */
+.guide-provider-example {
+  width: min(100%, 460px);
+  padding: 18px 20px;
+  border: 1px solid var(--guide-border);
+  border-radius: 14px;
+  background: var(--guide-surface);
+}
+.guide-provider-example figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  color: var(--guide-faint);
+  font-size: var(--guide-fs-micro);
+  line-height: 20px;
+}
+.provider-example-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0;
+}
+.provider-example-row > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.provider-example-row strong { font-size: 16px; line-height: 24px; font-weight: 600; }
+.provider-example-row small {
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-micro);
+  line-height: 18px;
+  letter-spacing: 0.03em;
+}
+.provider-example-row > svg {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--guide-faint);
+}
+.provider-enabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--guide-success);
+  font-size: var(--guide-fs-micro);
+  line-height: 20px;
+  white-space: nowrap;
+}
+.provider-enabled svg { width: 14px; height: 14px; }
+.guide-provider-example > p {
+  padding-top: 14px;
+  border-top: 1px solid var(--guide-border);
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 23px;
+}
+
+/* 终端 */
+.guide-terminal {
+  width: 100%;
+  max-width: var(--guide-panel);
+  overflow: hidden;
+  border: 1px solid #232f3f;
+  border-radius: 12px;
+  background: #141d2a;
+  color: #dfe7f3;
+}
+.guide-terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  color: #a8b6c9;
+  font-size: var(--guide-fs-micro);
+  line-height: 20px;
+}
+.guide-terminal-header > span:last-child { margin-left: auto; color: #7b8a9e; }
+.terminal-dots { color: #5e6f86; font-size: 13px; letter-spacing: 2px; }
+.guide-terminal pre {
+  overflow-x: auto;
+  padding: 18px 18px 10px;
+  font: 13.5px/1.85 ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.guide-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--guide-accent-text);
+  font-family: inherit;
+  font-size: var(--guide-fs-caption);
+  line-height: 20px;
+  cursor: pointer;
+}
+.guide-copy svg { width: 14px; height: 14px; }
+.guide-copy:hover { background: rgb(23 102 214 / 0.07); }
+.guide-terminal .guide-copy { margin: 0 8px 8px; color: #a8c8ff; }
+.guide-terminal .guide-copy:hover { background: rgb(168 200 255 / 0.1); }
+
+/* 示例提示 */
+.guide-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  max-width: var(--guide-panel);
+  padding: 16px 18px;
+  border: 1px solid var(--guide-border);
+  border-radius: 12px;
+  background: var(--guide-surface);
+}
+.guide-prompt > svg { width: 18px; height: 18px; margin-top: 4px; flex-shrink: 0; color: var(--guide-accent); }
+.guide-prompt > p { flex: 1; min-width: 160px; font-size: var(--guide-fs-body); line-height: var(--guide-lh-body); }
+.guide-prompt > .guide-copy { margin-left: auto; }
+
+.beginner-guide .guide-small-note {
+  max-width: var(--guide-measure);
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 23px;
+}
+.guide-small-note a { color: var(--guide-accent-text); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── 资源 ─────────────────────────────────────────────────────────────────── */
+.guide-resources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.guide-resource {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 4px 14px;
+  padding: 20px;
+  border: 1px solid var(--guide-border);
+  border-radius: 14px;
+  background: var(--guide-surface);
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.guide-resource:hover {
+  border-color: var(--guide-accent);
+  box-shadow: 0 2px 10px rgb(16 24 40 / 0.05);
+}
+.guide-resource-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  grid-row: 1/3;
+  color: var(--guide-text);
+}
+.guide-resource-mark svg { width: 22px; height: 22px; }
+.guide-resource-mark.claude { color: #bf7a58; }
+.guide-resource > strong {
+  align-self: center;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--guide-text);
+}
+.guide-resource > p {
+  grid-column: 2;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 23px;
+}
+.guide-resource-action {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--guide-border);
+  color: var(--guide-accent-text);
+  font-size: var(--guide-fs-caption);
+  line-height: 20px;
+  font-weight: 500;
+}
+.guide-resource-action svg { width: 14px; height: 14px; }
+
+.guide-internal-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+  border-top: 1px solid var(--guide-border);
+}
+.guide-internal-links > a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--guide-border);
+  text-decoration: none;
+}
+.guide-internal-links > a > svg { width: 18px; height: 18px; color: var(--guide-muted); flex-shrink: 0; }
+.guide-internal-links > a > svg:last-child { margin-left: auto; width: 15px; height: 15px; color: var(--guide-faint); }
+.guide-internal-links strong {
+  display: block;
+  color: var(--guide-text);
+  font-size: var(--guide-fs-small);
+  line-height: 24px;
+  font-weight: 550;
+}
+.guide-internal-links small {
+  display: block;
+  margin-top: 2px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 21px;
+}
+.guide-internal-links > a:hover strong { color: var(--guide-accent-text); }
+
+/* ── FAQ ──────────────────────────────────────────────────────────────────── */
+/* FAQ 行：编号列 22 + 间距 14 = 36，问题与答案共用同一条文字左轴。
+   原来答案用固定 padding-left:38px，而问题文字实际从 36px 起，错开近 8px。 */
+.guide-faq { border-top: 1px solid var(--guide-border); }
+.guide-faq details { border-bottom: 1px solid var(--guide-border); }
+.guide-faq summary {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+.guide-faq summary::-webkit-details-marker { display: none; }
+.guide-faq summary > span:first-child {
+  color: var(--guide-faint);
+  font-size: var(--guide-fs-micro);
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.guide-faq summary > svg {
+  width: 16px;
+  height: 16px;
+  justify-self: end;
+  color: var(--guide-faint);
+  transition: transform 0.18s;
+}
+.guide-faq details[open] summary > svg { transform: rotate(45deg); }
+.guide-faq p {
+  max-width: var(--guide-measure);
+  margin-left: 36px;
+  padding: 0 0 8px;
+  color: var(--guide-muted);
+  font-size: 16px;
+  line-height: 27px;
+}
+.guide-faq .guide-text-link { margin: 0 0 20px 36px; }
+
+/* ── 页脚 ─────────────────────────────────────────────────────────────────── */
+.guide-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--guide-border);
+  border-radius: 16px;
+  background: var(--guide-surface);
+  margin-bottom: 40px;
+}
+.guide-footer > div { flex: 1; min-width: 220px; }
+.guide-footer h2 { font-size: 24px; line-height: 1.35; }
+.guide-footer p {
+  margin-top: 10px;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-small);
+  line-height: 25px;
+}
+.guide-footer > small {
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid var(--guide-border);
+  color: var(--guide-faint);
+  font-size: var(--guide-fs-caption);
+  line-height: 22px;
+}
+
+/* ── 目录 ─────────────────────────────────────────────────────────────────── */
+.guide-toc nav {
+  position: sticky;
+  top: 96px;
+  padding-left: 20px;
+  border-left: 1px solid var(--guide-border);
+}
+.guide-toc p {
+  margin-bottom: 14px;
+  color: var(--guide-faint);
+  font-size: var(--guide-fs-micro);
+  line-height: 20px;
+  font-weight: 600;
+}
+.guide-toc a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 22px;
+  text-decoration: none;
+}
+.guide-toc a > span {
+  color: var(--guide-faint);
+  font-size: var(--guide-fs-micro);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.guide-toc a:hover { color: var(--guide-text); }
+.guide-toc a[aria-current] { color: var(--guide-accent-text); font-weight: 600; }
+.guide-toc a[aria-current] > span { color: var(--guide-accent); }
+.guide-toc .guide-toc-top {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--guide-border);
+  font-size: var(--guide-fs-micro);
+}
+.guide-toc .guide-toc-top svg { width: 13px; height: 13px; }
+
+.guide-mobile-nav { display: none; }
+
+/* ── 响应式 ───────────────────────────────────────────────────────────────── */
+@media (max-width: 1599px) {
+  /* 插图已改用容器查询等比缩放，这里只收列宽，不再叠加 transform */
+  .guide-hero { grid-template-columns: minmax(0, 1fr) minmax(320px, 42%); gap: 40px; padding: 44px 0 40px; }
+  .guide-body { gap: 48px; grid-template-columns: minmax(0, 1fr) 170px; }
+}
+@media (max-width: 1279px) {
+  .guide-layout { --guide-fs-display: 44px; --guide-fs-h2: 30px; }
+  .guide-hero { grid-template-columns: 1fr; gap: 0; padding: 36px 0 32px; }
+  .guide-hero :deep(.guide-hero-art) { display: none; }
+  .guide-journey { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .guide-journey li:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .guide-journey li:nth-child(n + 3) { border-top: 1px solid var(--guide-border); }
+  .guide-journey svg { display: none; }
+  .guide-body { grid-template-columns: 1fr; gap: 0; }
+  .guide-toc { display: none; }
+  .guide-mobile-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 20px;
+    position: sticky;
+    top: 64px;
+    z-index: 20;
+    margin: 4px 0 32px;
+    padding: 8px 0 10px;
+    border-bottom: 1px solid var(--guide-border);
+    background: var(--guide-canvas);
+  }
+  .guide-mobile-nav a {
+    display: inline-block;
+    padding: 6px 0;
+    color: var(--guide-muted);
+    font-size: var(--guide-fs-caption);
+    line-height: 22px;
+    text-decoration: none;
+  }
+  .guide-mobile-nav a[aria-current] { color: var(--guide-accent-text); font-weight: 600; box-shadow: 0 2px var(--guide-accent); }
+}
+@media (max-width: 767px) {
+  .guide-layout { --guide-fs-display: 32px; --guide-fs-h2: 26px; --guide-fs-h3: 19px; --guide-fs-body: 16px; --guide-lh-body: 27px; --guide-rail: 0px; }
+  .guide-hero { padding: 24px 0 28px; }
+  .guide-hero h2 { margin-top: 14px; }
+  .guide-hero .guide-intro { margin-top: 16px; font-size: 16.5px; line-height: 28px; }
+  .guide-hero-actions { margin-top: 24px; gap: 10px; }
+  .guide-button, .guide-hero-actions .guide-text-link { height: 44px; padding: 0 16px; font-size: 15px; }
+  /* 手机：压成一条横向数字条，与下方章节 Tab 形成「块状 vs 文字」的区别 */
+  .guide-journey {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+    padding: 14px 0;
+    border-block: 0;
+    border-top: 1px solid var(--guide-border);
+    border-bottom: 1px solid var(--guide-border);
+  }
+  .guide-journey li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+  }
+  .guide-journey li + li { padding-left: 0; border-left: 0; }
+  .guide-journey li:not(:last-child)::after {
+    content: '';
+    width: 10px;
+    height: 1px;
+    background: var(--guide-border-strong);
+  }
+  .guide-journey li .journey-label { display: none; }
+  .journey-number { width: 30px; height: 30px; border-radius: 9px; font-size: 13px; }
+  .guide-section { margin-bottom: 64px; }
+  .guide-section-heading { margin-bottom: 24px; }
+  .guide-section-heading h2 { margin-top: 10px; }
+  .guide-section-heading > p:last-child { margin-top: 12px; }
+  .beginner-guide .guide-subtitle { margin: 40px 0 16px; font-size: 20px; }
+  .guide-glossary { grid-template-columns: 1fr; }
+  .guide-selectors { padding: 18px; gap: 18px; }
+  .guide-selectors fieldset { flex-basis: 100%; }
+  .guide-segmented button { min-height: 38px; font-size: 14px; padding: 6px 8px; }
+  .guide-step { padding: 26px 0; }
+  /* 手机没有横向余量：编号退到标题上方，标题与正文共享页面左边缘，
+     不再出现「标题缩进、正文贴边」的两条轴 */
+  .guide-step-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .guide-step-number { width: 26px; height: 26px; border-radius: 7px; font-size: 13px; }
+  .guide-step-content { padding-left: 0; gap: 14px; }
+  .guide-resources, .guide-internal-links { grid-template-columns: 1fr; }
+  .guide-resource { padding: 18px; }
+  .guide-faq summary { padding: 16px 0; font-size: 16px; line-height: 25px; }
+  /* 与 summary 的 22 + 14 = 36 同值，答案仍在问题那一条轴上 */
+  .guide-faq p { margin-left: 36px; font-size: 15.5px; line-height: 26px; }
+  .guide-faq .guide-text-link { margin-left: 36px; }
+  .guide-footer { padding: 22px; gap: 18px; }
+  .guide-terminal pre { font-size: 13px; padding-inline: 14px; }
+  .guide-provider-example { padding: 16px; }
+  .guide-prompt { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .beginner-guide * { transition: none; }
+}
+
+/* Desktop-first onboarding, using the existing reading scale and alignment rail. */
+.guide-route-summary { display: flex; align-items: center; gap: 14px; margin: 18px 0 6px; padding: 18px 20px; border-bottom: 1px solid var(--guide-border); }
+.guide-route-icon { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--guide-border); border-radius: 12px; background: var(--guide-surface); flex-shrink: 0; }
+.guide-route-summary strong { font-size: 17px; font-weight: 600; line-height: 26px; }
+.guide-route-summary p { color: var(--guide-muted); font-size: 15px; line-height: 25px; margin-top: 2px; }
+.guide-route-badge { margin-left: auto; flex-shrink: 0; padding: 4px 10px; border-radius: 6px; background: var(--guide-soft); color: var(--guide-accent-text); font-size: 13px; line-height: 22px; }
+.guide-terms-disclosure { margin-top: 28px; border-block: 1px solid var(--guide-border); }
+.guide-terms-disclosure>summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; color: var(--guide-text); font-size: 16px; font-weight: 500; cursor: pointer; list-style: none; }
+.guide-terms-disclosure>summary::-webkit-details-marker { display: none; }
+.guide-terms-disclosure>summary>svg { width: 17px; height: 17px; color: var(--guide-muted); }
+.guide-terms-disclosure[open]>summary>svg { transform: rotate(180deg); }
+.guide-terms-disclosure .guide-glossary { border-top: 0; padding-bottom: 12px; }
+.guide-config-help { width: 100%; max-width: var(--guide-panel); border: 1px solid var(--guide-border); border-radius: 12px; padding: 0 18px; background: var(--guide-surface); }
+.guide-config-help>summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; padding: 15px 0; font-size: 15px; font-weight: 500; line-height: 25px; }
+.guide-config-help>summary::-webkit-details-marker { display: none; }
+.guide-config-help[open]>summary>svg { transform: rotate(180deg); }
+.guide-config-help>p { color: var(--guide-muted); font-size: 15px; line-height: 26px; margin: 0 0 12px; }
+.guide-config-help>a { margin-bottom: 16px; }
+.guide-path { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 10px 12px; margin: 12px 0; border-radius: 8px; background: var(--guide-canvas); }
+.guide-path code { font-size: 14px; overflow-wrap: anywhere; }
+.guide-desktop-actions { list-style: none; padding: 0; display: grid; gap: 20px; width: 100%; max-width: var(--guide-panel); }
+.guide-desktop-actions>li { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 12px; align-items: start; }
+.guide-desktop-actions>li>span { display: grid; place-items: center; width: 26px; height: 26px; margin-top: 1px; border-radius: 50%; border: 1px solid var(--guide-border-strong); color: var(--guide-accent-text); font-size: 13px; font-weight: 500; }
+.guide-desktop-actions strong { font-size: 16px; font-weight: 600; line-height: 27px; }
+.guide-desktop-actions p { color: var(--guide-muted); font-size: 16px; line-height: 27px; margin-top: 5px; }
+.guide-faq-question { min-width: 0; }
+.guide-toc { align-self: stretch; }
+.guide-desktop-actions p { font-size: 15.5px; line-height: 26px; }
+.guide-desktop-actions { gap: 18px; }
+.guide-route-summary { margin-top: 14px; }
+.guide-protocols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.guide-protocol-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--guide-border);
+  border-radius: 14px;
+  background: var(--guide-surface);
+}
+.guide-protocol-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.guide-protocol-head strong {
+  color: var(--guide-text);
+  font-size: var(--guide-fs-small);
+  line-height: 22px;
+  font-weight: 600;
+}
+.guide-protocol-head span {
+  color: var(--guide-accent-text);
+  font-size: var(--guide-fs-micro);
+  line-height: 19px;
+}
+.guide-protocol-card .guide-path {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+}
+.guide-protocol-card .guide-path code {
+  font-size: 13px;
+  line-height: 18px;
+  word-break: break-all;
+}
+.guide-protocol-card > p {
+  color: var(--guide-muted);
+  font-size: var(--guide-fs-caption);
+  line-height: 21px;
+}
+
+@media (max-width: 1120px) {
+  .guide-protocols { grid-template-columns: 1fr; }
+  .guide-protocol-card .guide-path {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width:767px) {
+  .guide-protocols { grid-template-columns: 1fr; }
+  .beginner-guide .guide-journey { display: none; }
+  .guide-mobile-nav { margin-top: 0; }
+  .guide-media-pair { grid-template-columns: 1fr; gap: 18px; }
+  .guide-route-summary { padding: 16px 0; align-items: flex-start; }
+  .guide-route-badge { display: none; }
+  .guide-route-summary p { font-size: 14px; line-height: 24px; }
+  .guide-config-help { padding-inline: 14px; }
+  .guide-desktop-actions { gap: 18px; }
+}

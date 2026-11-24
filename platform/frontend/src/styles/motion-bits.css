@@ -1,0 +1,345 @@
+/* ============================================================================
+ * ReactBits-Inspired Interactive Motion Layer (GPU-Composited, 60fps)
+ * - SpotlightCard: pointer-tracking specular light sheen on Soft Elevation cards
+ * - GlareHover: diagonal glass sheen sweep on primary CTAs
+ * - StarBorder: restrained traveling starlight highlight along hero card top rim
+ * - TiltedCard: restrained 3D perspective micro-tilt on [data-tilt] showcase cards
+ * - Magnet: subtle pointer magnetic pull on [data-magnet] floating CTAs
+ * - ClickSpark: crisp 8-ray micro-spark particle burst on micro-reward clicks
+ * - Sliding Spring Tabs: tactile elastic active thumb on segmented controls
+ * - BlurText: soft unblur-rise entrance on page hero headings
+ *
+ * Scoped cleanly away from .studio-root, .gabugu-landing, .gabugu-auth.
+ * Fully disabled under @media (prefers-reduced-motion: reduce).
+ * ============================================================================ */
+
+:root {
+  --ui-spot-grad: radial-gradient(
+    360px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+    rgba(255, 252, 245, 0.42) 0%,
+    rgba(176, 126, 78, 0.06) 44%,
+    transparent 72%
+  );
+  --ui-star-beam: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 18%,
+    rgba(255, 255, 255, 0.96) 36%,
+    rgba(182, 93, 54, 0.42) 50%,
+    rgba(45, 88, 144, 0.42) 64%,
+    transparent 82%,
+    transparent 100%
+  );
+}
+
+.dark {
+  --ui-spot-grad: radial-gradient(
+    400px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+    rgba(124, 162, 255, 0.145) 0%,
+    rgba(167, 139, 250, 0.075) 36%,
+    rgba(56, 211, 180, 0.032) 56%,
+    transparent 74%
+  );
+  --ui-star-beam: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 14%,
+    rgba(124, 162, 255, 0.78) 32%,
+    rgba(167, 139, 250, 0.88) 48%,
+    rgba(56, 211, 180, 0.78) 64%,
+    rgba(246, 212, 148, 0.62) 76%,
+    transparent 90%,
+    transparent 100%
+  );
+}
+
+/* ============ 1. SpotlightCard — Pointer-Tracking Specular Light ============
+ * Uses ::after with inset: 0 + border-radius: inherit so dropdowns inside cards
+ * are NEVER clipped by overflow: hidden.
+ */
+:is(.card, .ui-soft-card, .overview-surface, .overview-savings, .usage-discount-card):not(
+  .bg-emerald-50
+):not(.bg-red-50):not(.bg-amber-50):not([data-no-spotlight])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ui-spot-grad);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:is(.card, .ui-soft-card, .overview-surface, .overview-savings, .usage-discount-card)[data-spot-active='1']::after {
+  opacity: 1;
+}
+
+/* Guarantee Studio / Landing / Auth / Arena remain 100% untouched */
+:is(.studio-root, .gabugu-landing, .gabugu-auth, .arena-page)
+  :is(.card, .ui-soft-card, .overview-surface, .overview-savings, .usage-discount-card)::after {
+  display: none !important;
+}
+
+/* ============ 2. GlareHover — Diagonal Glass Sheen on Primary CTAs ============ */
+:is(.btn-primary, .overview-primary-button, .btn-alipay, .btn-wxpay, .btn-stripe) {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+:is(.btn-primary, .overview-primary-button, .btn-alipay, .btn-wxpay, .btn-stripe)::after {
+  content: '';
+  position: absolute;
+  inset: -40% auto -40% -65%;
+  width: 52%;
+  background: linear-gradient(
+    112deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.34) 48%,
+    rgba(255, 255, 255, 0.1) 62%,
+    transparent 85%
+  );
+  transform: translateX(-120%) skewX(-20deg);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: transform 640ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
+}
+
+:is(.btn-primary, .overview-primary-button, .btn-alipay, .btn-wxpay, .btn-stripe):hover:not(:disabled)::after {
+  opacity: 1;
+  transform: translateX(420%) skewX(-20deg);
+}
+
+/* Keep studio/landing/auth/arena buttons clean */
+:is(.studio-root, .gabugu-landing, .gabugu-auth, .arena-page)
+  :is(.btn-primary, .overview-primary-button, .btn-alipay, .btn-wxpay, .btn-stripe)::after {
+  display: none !important;
+}
+
+/* ============ 3. StarBorder — Ambient Traveling Starlight Top Rim ============ */
+[data-star-border]::before {
+  background: var(--ui-star-beam) !important;
+  background-size: 240% 100% !important;
+  height: 1.5px !important;
+  animation: g-star-travel 7.5s ease-in-out infinite;
+}
+
+@keyframes g-star-travel {
+  0% {
+    background-position: 120% 0;
+    opacity: 0.62;
+  }
+  50% {
+    background-position: -20% 0;
+    opacity: 1;
+  }
+  100% {
+    background-position: 120% 0;
+    opacity: 0.62;
+  }
+}
+
+/* ============ 4. TiltedCard — Restrained 3D Perspective Micro-Tilt ============ */
+[data-tilt] {
+  transform-style: preserve-3d;
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-image 240ms ease,
+    background-color 200ms ease;
+}
+
+[data-tilt][data-tilt-active='1'] {
+  will-change: transform;
+  transform: perspective(920px) rotateX(var(--tilt-rx, 0deg)) rotateY(var(--tilt-ry, 0deg))
+    translateY(-2px);
+  transition:
+    transform 85ms linear,
+    box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-image 200ms ease;
+}
+
+[data-tilt]:active {
+  transform: perspective(920px) rotateX(0deg) rotateY(0deg) scale(0.985) !important;
+}
+
+/* ============ 5. Magnet — Tactile Pointer Magnetic Pull on CTAs ============
+ * Uses standalone CSS `translate` property so Tailwind hover:-translate-y-px
+ * and active:scale-[0.98] compose cleanly without conflict.
+ */
+[data-magnet] {
+  translate: 0px 0px;
+  transition:
+    translate 380ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-magnet][data-magnet-active='1'] {
+  translate: var(--mag-x, 0px) var(--mag-y, 0px);
+  transition:
+    translate 75ms linear,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============ 6. ClickSpark — Crisp 8-Ray Micro-Spark Particle Burst ============ */
+.g-spark-burst {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+  contain: layout style;
+}
+
+.g-spark-ray {
+  position: absolute;
+  left: -1px;
+  top: -5px;
+  width: 2px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--spark-color, #5682f5);
+  transform-origin: center bottom;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: g-spark-shoot 390ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes g-spark-shoot {
+  0% {
+    opacity: 0.95;
+    transform: rotate(var(--spark-angle, 0deg)) translateY(-3px) scaleY(0.55);
+  }
+  40% {
+    opacity: 0.92;
+    transform: rotate(var(--spark-angle, 0deg)) translateY(calc(var(--spark-dist, 20px) * -0.68))
+      scaleY(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle, 0deg)) translateY(calc(var(--spark-dist, 20px) * -1.18))
+      scaleY(0.25);
+  }
+}
+
+/* ============ 7. Sliding Spring Segmented Control ============ */
+.g-segmented,
+.overview-periods.g-segmented {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0;
+  align-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(235, 224, 209, 0.72);
+  box-shadow: inset 0 1px 2px rgba(70, 45, 20, 0.06);
+}
+
+.dark .g-segmented,
+.dark .overview-periods.g-segmented {
+  background: rgba(255, 255, 255, 0.032);
+  box-shadow: inset 0 0 0 0.5px rgba(176, 204, 255, 0.08);
+}
+
+.g-segmented-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--seg-count, 2));
+  border-radius: 10px;
+  background-image: var(--ui-pill-grad);
+  box-shadow: var(--ui-shadow-pill), inset 0 0 0 0.5px var(--ui-hairline);
+  transform: translateX(calc(var(--seg-index, 0) * 100%));
+  transition: transform 340ms cubic-bezier(0.34, 1.32, 0.64, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .g-segmented-thumb {
+  background-image: none;
+  background-color: rgba(124, 162, 255, 0.15);
+  box-shadow: inset 0 0 0 0.5px rgba(124, 162, 255, 0.22);
+}
+
+.g-segmented > button,
+.overview-periods.g-segmented > button {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+@supports (corner-shape: squircle) {
+  .g-segmented {
+    corner-shape: squircle;
+  }
+  .g-segmented-thumb {
+    corner-shape: squircle;
+  }
+}
+
+/* ============ 8. BlurText — Soft Editorial Unblur-Rise Hero Entrance ============ */
+.g-blur-in {
+  animation: g-blur-text-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes g-blur-text-in {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(7px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+/* ============ Reduced Motion & Touch Safeguards ============ */
+@media (hover: none), (pointer: coarse) {
+  :is(.card, .ui-soft-card, .overview-surface, .overview-savings, .usage-discount-card)::after {
+    display: none;
+  }
+  [data-tilt],
+  [data-magnet] {
+    transform: none !important;
+    translate: 0px 0px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.card, .ui-soft-card, .overview-surface, .overview-savings, .usage-discount-card)::after,
+  :is(.btn-primary, .overview-primary-button, .btn-alipay, .btn-wxpay, .btn-stripe)::after,
+  .g-spark-burst {
+    display: none !important;
+  }
+
+  [data-star-border]::before,
+  .g-blur-in {
+    animation: none !important;
+  }
+
+  [data-tilt],
+  [data-magnet],
+  .g-segmented-thumb {
+    transition: none !important;
+    transform: none !important;
+    translate: 0px 0px !important;
+  }
+
+  .g-segmented-thumb {
+    transform: translateX(calc(var(--seg-index, 0) * 100%)) !important;
+  }
+}

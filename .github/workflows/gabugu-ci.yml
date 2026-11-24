@@ -1,0 +1,69 @@
+name: Gabugu CI
+
+on:
+  push:
+    paths:
+      - 'platform/**'
+      - '.github/workflows/gabugu-ci.yml'
+  pull_request:
+    paths:
+      - 'platform/**'
+      - '.github/workflows/gabugu-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-verifier-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Verify release sync and overlay tests
+        working-directory: platform/deploy
+        run: python -B -m unittest -v release_sync_test test_release_overlay
+
+  backend-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: platform/backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: platform/backend/go.mod
+          cache-dependency-path: platform/backend/go.sum
+      - run: go test -count=1 -tags=unit ./...
+
+  frontend-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: platform/frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.9
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: platform/backend/go.mod
+          cache-dependency-path: platform/backend/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:i18n
+      - run: pnpm typecheck
+      - run: pnpm lint:check
+      - run: pnpm test:run
+      - run: pnpm build
+      - name: Build embedded application
+        working-directory: platform/backend
+        run: go build -tags=embed ./cmd/server

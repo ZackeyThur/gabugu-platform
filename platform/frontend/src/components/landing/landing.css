@@ -1,0 +1,420 @@
+@font-face {
+  font-family: "Noto Sans SC Landing";
+  src: url('/brand/noto-sans-sc-landing-0ee544f5.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+}
+/* Brand rules for this page are in docs/BRAND_FRONTEND.md: black, silver and blue; the project's sans pair
+   (Inter for Latin, self-hosted Noto Sans SC for Chinese) and no serif face; Chinese in weights 400 and 500.
+   The page is eight screens, each as tall as the window, over a picture of the Earth that stays in place
+   (EarthStage, or a still picture). Sizes and spaces follow the window's height, so that every screen fits
+   in one window from a short laptop to a tall display; HomeView measures whether they do. */
+.gabugu-landing {
+  --landing-bg: #08080d;
+  --landing-text: #f2f3f5;
+  --landing-muted: #a9adb8;
+  --landing-line: rgba(229, 231, 235, .14);
+  --landing-header-height: 88px;
+  --landing-gutter: 56px;
+  --landing-ease: cubic-bezier(.16, 1, .3, 1);
+  /* One hundredth of the screen height; the small-viewport unit where the browser has it, so that a
+     phone's toolbar coming and going does not change the layout. */
+  --landing-vh: 1vh;
+  /* Room above and below a screen's words, and between their parts. */
+  --screen-pad: clamp(14px, 4 * var(--landing-vh), 56px);
+  --screen-gap: clamp(12px, 3.2 * var(--landing-vh), 36px);
+  --screen-gap-small: clamp(6px, 1.5 * var(--landing-vh), 16px);
+  /* Nothing on a short screen and a great deal on a taller one: as a max-height it takes away what a
+     short phone has no room for. A media query cannot do this, because the height it sees changes
+     whenever the phone's toolbar comes or goes. */
+  --if-roomy: clamp(0px, (100 * var(--landing-vh) - 620px) * 999, 999px);
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: var(--landing-bg);
+  color: var(--landing-text);
+  font-family: Inter, "Noto Sans SC Landing", "Gabugu Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  overflow: clip;
+  color-scheme: dark;
+}
+@supports (height: 1svh) {
+  .gabugu-landing { --landing-vh: 1svh; }
+}
+
+.gabugu-landing ::selection { background: rgba(59, 130, 246, .45); color: #fff; }
+/* The page lies over the picture, which is fixed behind it. */
+.gabugu-landing>main, .landing-footer { position: relative; z-index: 1; }
+.gabugu-landing>.landing-backdrop { position: fixed; inset: 0 auto auto 0; width: 100%; height: 100vh; z-index: 0; }
+@supports (height: 100lvh) {
+  .gabugu-landing>.landing-backdrop { height: 100lvh; }
+}
+.landing-screen-probe { position: absolute; top: 0; left: 0; width: 0; height: calc(100 * var(--landing-vh)); visibility: hidden; pointer-events: none; }
+.landing-container { width: min(100% - var(--landing-gutter) * 2, 1240px); margin-inline: auto; }
+.gabugu-landing a:focus-visible, .gabugu-landing button:focus-visible, .console-pane:focus-visible { outline: 2px solid #77aaff; outline-offset: 5px; }
+.gabugu-landing #main-content:focus, .landing-screen:focus { outline: none; }
+.landing-skip { position: absolute; z-index: 50; left: 16px; top: 12px; padding: 10px 16px; border-radius: 5px; background: #fff; color: #08080d; transform: translateY(-170%); }
+.landing-skip:focus { transform: translateY(0); }
+.landing-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* The header keeps its place at the top of the page and the picture runs behind it. Its own ground is a
+   shade that runs out downwards: words that pass under it while a screen turns do not cross its links. */
+.landing-header { position: sticky; top: 0; z-index: 20; height: var(--landing-header-height); border-bottom: 1px solid transparent; transition: background-color .22s, border-color .22s; }
+.landing-header::before { content: ''; position: absolute; inset: 0 0 -36%; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(8, 8, 13, .88) 0, rgba(8, 8, 13, .62) 58%, rgba(8, 8, 13, 0) 100%); }
+/* Where the page scrolls freely, words stay under the header for as long as the visitor likes. */
+.landing-header.solid { border-color: #ffffff12; background: rgba(8, 8, 13, .7); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .landing-header.solid { background: var(--landing-bg); }
+}
+.landing-nav { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+.landing-brand { display: inline-flex; align-items: center; gap: 12px; flex-shrink: 0; min-height: 44px; color: #f4f6fb; text-decoration: none; }
+.landing-brand img { object-fit: contain; }
+.landing-brand > .gabugu-wordmark { font-size: 22px; }
+.landing-nav-links { display: flex; align-items: center; gap: 28px; margin-left: auto; }
+.landing-nav-links a, .landing-sign-in { display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; color: #c5c8d0; transition: color .2s; white-space: nowrap; }
+.landing-nav-links a:hover, .landing-sign-in:hover { color: #fff; }
+.landing-nav-actions { display: flex; align-items: center; gap: 20px; }
+.landing-nav-actions :deep(button) { min-height: 44px; color: #c5c8d0; }
+.landing-nav-actions :deep(button:hover) { background: #ffffff0d; }
+.landing-nav-actions :deep(.absolute) { background: #17181f; border-color: #30313a; }
+/* The locale label carries the meaning; emoji flags add visual noise to the brand header. */
+.landing-nav-actions :deep(.text-base) { display: none; }
+.landing-nav-actions :deep(.hidden.sm\:inline) { display: inline; }
+
+/* The arrow sits close to its label so the two read as one control. */
+.landing-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 24px; border: 1px solid transparent; border-radius: 999px; font-size: 16px; font-weight: 500; line-height: 1.5; white-space: nowrap; transition: background-color .2s, transform .12s; }
+.landing-button:active { transform: scale(.98); }
+.landing-button svg, .landing-text-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+.landing-button-white { background: #f2f3f5; color: #111216; }
+.landing-button-white:hover { background: #fff; }
+.landing-button-blue { background: #3b82f6; color: #fff; }
+.landing-button-blue:hover { background: #4d8ff9; }
+.landing-button-small { min-height: 44px; padding-inline: 20px; font-size: 15px; }
+.landing-text-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 16px; color: #a9c9ff; white-space: nowrap; transition: color .2s; }
+.landing-text-link:hover { color: #fff; }
+
+/* A screen: as tall as the window, its words centred in the room under the header. While the page turns,
+   HomeView lets a screen's words fade (--screen-near) and holds them back against the scroll
+   (--screen-shift), so that between two screens the picture has the window to itself for a moment. */
+.landing-screen { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: center; min-height: calc(100 * var(--landing-vh)); padding: calc(var(--landing-header-height) + var(--screen-pad)) 0 var(--screen-pad); opacity: var(--screen-near, 1); scroll-snap-align: start; scroll-snap-stop: always; }
+/* The drift is on what the screen holds, not on the screen: where the browser snaps the page, it snaps to the screen's own box. */
+.landing-screen>.landing-container, .hero-stage { translate: 0 var(--screen-shift, 0px); }
+.screen-column, .screen-center { display: flex; flex-direction: column; gap: var(--screen-gap); min-width: 0; }
+.screen-head { min-width: 0; }
+.section-kicker { display: flex; align-items: center; gap: 14px; margin: 0 0 var(--screen-gap-small); font-size: 14px; line-height: 1.5; color: #b3bac6; }
+.section-kicker>span { font-size: 12px; color: #8893a6; font-variant-numeric: tabular-nums; }
+/* 36–48px on a desktop; a short window takes a smaller size, down to the phone's 32px. */
+.landing-screen h2 { margin: 0; font-size: min(clamp(36px, 3.4vw, 48px), max(32px, 6.4 * var(--landing-vh))); font-weight: 500; line-height: 1.3; letter-spacing: -.02em; text-wrap: balance; }
+.gabugu-landing:lang(en) .landing-screen h2 { line-height: 1.2; letter-spacing: -.035em; }
+.section-description { max-width: 28em; margin: var(--screen-gap-small) 0 0; font-size: clamp(16px, 2.3 * var(--landing-vh), 18px); line-height: 1.75; color: var(--landing-muted); text-wrap: pretty; }
+/* What ends a screen: one link, and a note in small type beside or under it. */
+.screen-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; min-width: 0; }
+.screen-note { margin: 0; font-size: 13px; line-height: 1.6; color: #98a1b1; text-wrap: pretty; }
+.step-number { width: 28px; flex-shrink: 0; font-size: 13px; font-variant-numeric: tabular-nums; color: #8fb4f0; }
+
+/* First screen: text in the black sky, the planet below it. HomeView measures where .hero-ground starts
+   and tells the picture, live or still, to keep the planet's edge there, so the two never overlap. */
+.landing-hero { z-index: 2; margin-top: calc(-1 * var(--landing-header-height)); padding: 0; justify-content: flex-start; }
+.hero-stage { display: flex; flex-direction: column; min-height: calc(100 * var(--landing-vh)); }
+/* The text takes the room it needs and centres in what the planet leaves. */
+.hero-content { flex: 0 0 auto; margin-block: auto; padding-top: calc(var(--landing-header-height) + clamp(8px, 2 * var(--landing-vh), 32px)); padding-bottom: clamp(14px, 4 * var(--landing-vh), 64px); }
+.hero-eyebrow { display: flex; align-items: center; gap: 12px; margin-bottom: clamp(10px, 2.4 * var(--landing-vh), 32px); font-size: 12px; font-weight: 500; letter-spacing: .14em; color: #b2b8c5; }
+.hero-eyebrow>span { width: 6px; height: 6px; border-radius: 50%; background: #8bb4f6; }
+/* 60–80px on a desktop and 44–60px on a phone. A short window, such as a laptop with the browser's bars
+   showing, takes a smaller size so that the planet stays on the first screen. */
+.landing-hero h1 { margin: 0; font-size: min(clamp(60px, 5.6vw, 80px), max(44px, 8.8 * var(--landing-vh))); font-weight: 500; line-height: 1.2; letter-spacing: -.02em; color: #f7f7f8; }
+.gabugu-landing:lang(en) .landing-hero h1 { font-size: min(clamp(48px, 5.1vw, 74px), max(40px, 8.2 * var(--landing-vh))); letter-spacing: -.055em; }
+/* Each line is a mask, and the headline is cut into pieces (characters in Chinese, words in English): on
+   load they rise out of the line one after another. */
+.hero-line { display: block; overflow: hidden; padding-bottom: .16em; margin-bottom: -.16em; }
+.hero-piece { display: inline-block; white-space: pre; }
+.hero-line+.hero-line { margin-top: .07em; color: #dce3ed; }
+/* The opening pose, held until the headline's typeface has arrived (see useLandingMotion). */
+.gabugu-landing.intro-pending .hero-piece { transform: translateY(112%); }
+.gabugu-landing.intro-pending .hero-eyebrow, .gabugu-landing.intro-pending .hero-description, .gabugu-landing.intro-pending .hero-actions, .gabugu-landing.intro-pending .hero-foot, .gabugu-landing.intro-pending .screen-dots { opacity: 0; }
+.hero-description { max-width: 27em; margin: clamp(10px, 2.4 * var(--landing-vh), 28px) 0 0; font-size: clamp(16px, 2.9 * var(--landing-vh), 20px); line-height: 1.8; color: #bdc2cc; text-wrap: pretty; }
+.gabugu-landing:lang(en) .hero-description { max-width: 34em; }
+/* Each sentence is kept whole where it fits; where it has to fold, its lines come out even. */
+.hero-description>span { display: inline-block; text-wrap: balance; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; margin-top: clamp(14px, 3 * var(--landing-vh), 32px); }
+.hero-actions .landing-text-link { color: #d3d6de; }
+/* The planet starts from its smallest height and grows into the room the text leaves, up to about two
+   fifths of the screen. */
+.hero-ground { flex: 1 1 clamp(84px, 17 * var(--landing-vh), 210px); min-height: clamp(84px, 17 * var(--landing-vh), 210px); max-height: clamp(210px, 38 * var(--landing-vh), 460px); display: flex; align-items: flex-end; background: linear-gradient(0deg, rgba(8, 8, 13, .78) 0, rgba(8, 8, 13, 0) 132px); }
+/* The caption row stands on the planet, over a strip that runs into the page colour. */
+.hero-foot { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: clamp(4px, 1.4 * var(--landing-vh), 12px) clamp(6px, 1.6 * var(--landing-vh), 14px); font-size: 13px; line-height: 1.6; color: #c3c8d2; }
+.hero-scroll { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; transition: color .2s; }
+.hero-scroll:hover { color: #fff; }
+.hero-campaign { display: none; }
+/* Leave both ends of the first-screen navigation clear on a desktop. */
+.home-floating-campaign { --campaign-home-width: min(1100px, calc(100% - 400px)); }
+/* After the opening the arrow dips twice and then rests. */
+.gabugu-landing.intro-cue .hero-scroll svg { animation: scroll-cue 1.2s ease-in-out 2; }
+@keyframes scroll-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+
+/* Where the visitor is among the screens: a dot for each at the window's right edge. A dot's name shows
+   when it is pointed at or has the focus. */
+/* The picture behind them is bright in places, so they stand on a ground of their own. */
+.screen-dots { position: fixed; z-index: 15; top: calc(50% + var(--landing-header-height) / 2); right: max(4px, (var(--landing-gutter) - 48px) / 2); display: flex; flex-direction: column; align-items: center; padding: 4px 2px 10px; border: 1px solid rgba(255, 255, 255, .06); border-radius: 24px; background: rgba(8, 8, 13, .5); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transform: translateY(-50%); }
+.screen-dots button { position: relative; width: 44px; height: 44px; }
+.screen-dots button::before { content: ''; position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(242, 243, 245, .4); transition: transform .3s var(--landing-ease), background-color .3s, box-shadow .3s; }
+.screen-dots button:hover::before { background: rgba(242, 243, 245, .8); }
+.screen-dots button.active::before { background: #f2f3f5; transform: scale(1.5); box-shadow: 0 0 0 3px rgba(242, 243, 245, .16); }
+.screen-dot-name { position: absolute; top: 50%; right: 100%; padding: 4px 10px; border-radius: 6px; background: rgba(8, 8, 13, .78); font-size: 13px; line-height: 1.5; color: #e6e8ee; white-space: nowrap; opacity: 0; pointer-events: none; transform: translate(6px, -50%); transition: opacity .2s, transform .2s var(--landing-ease); }
+.screen-dots button:hover .screen-dot-name, .screen-dots button:focus-visible .screen-dot-name { opacity: 1; transform: translate(0, -50%); }
+.screen-count { margin-top: 2px; font-size: 12px; line-height: 1.5; white-space: nowrap; color: #b9c0cc; font-variant-numeric: tabular-nums; }
+
+/* Models: one row for each family the site offers. A row leads to the integration screen, with that
+   family's protocol chosen. */
+.provider-list { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--landing-line); }
+.provider-list li { border-top: 1px solid var(--landing-line); }
+.provider-example { display: flex; align-items: center; gap: 16px; width: 100%; min-height: clamp(44px, 8.2 * var(--landing-vh), 68px); text-align: left; color: #a2a7b3; transition: opacity .45s var(--landing-ease); }
+.provider-name { flex: 1 1 auto; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.provider-symbol { flex-shrink: 0; align-self: center; margin-right: 2px; color: #d4d8e1; }
+/* Larger than body text and clearly below the section heading. */
+.provider-model { font-size: clamp(20px, 3.4 * var(--landing-vh), 24px); font-weight: 500; line-height: 1.3; letter-spacing: -.03em; color: #eeeff2; }
+.provider-company { font-size: 14px; line-height: 1.5; color: #8e97a8; white-space: nowrap; }
+.provider-protocol { flex-shrink: 0; font-size: 14px; line-height: 1.5; white-space: nowrap; }
+.provider-action { flex-shrink: 0; display: inline-flex; align-items: center; color: #8e97a8; transition: color .2s, transform .45s var(--landing-ease); }
+.provider-example:focus-visible .provider-action { color: #fff; }
+@media (hover: hover) {
+  .provider-example:hover .provider-action { color: #fff; transform: translateX(3px); }
+  .provider-example:hover .provider-protocol { color: #d7dbe3; }
+}
+/* Pointing at one row sets the others back. Kept apart from other selectors: a browser without :has()
+   drops the whole rule. */
+@media (hover: hover) {
+  .provider-list:has(.provider-example:hover) .provider-example:not(:hover) { opacity: .55; }
+}
+
+/* Integration: the SDK pointed at this site, to be copied. The panel and the sample further down are
+   the only boxes on the page. */
+.connection-console { min-width: 0; border: 1px solid #30333e; border-radius: 14px; background: rgba(13, 15, 21, .86); overflow: hidden; }
+.console-bar { display: flex; align-items: center; gap: 12px; padding: 0 8px 0 20px; border-bottom: 1px solid #ffffff12; }
+.protocol-tabs { display: flex; gap: 22px; margin-right: auto; }
+.protocol-tabs button { min-height: 44px; border-bottom: 2px solid transparent; font-size: 14px; color: #a4adbc; transition: color .2s, border-color .2s; }
+.protocol-tabs button.active { border-color: #80aeef; color: #e4edfb; }
+.protocol-tabs button:hover { color: #fff; }
+.console-language { font-size: 12px; line-height: 1.5; letter-spacing: .04em; color: #8892a4; }
+.code-copy { display: flex; align-items: center; gap: 7px; min-height: 44px; padding-inline: 12px; border-radius: 6px; font-size: 14px; color: #c4ccd9; white-space: nowrap; transition: background-color .2s; }
+.code-copy:hover { background: #ffffff0c; }
+/* The three examples share one grid cell: the panel is as tall as the longest and never changes height. */
+.console-panes { display: grid; }
+.console-pane { grid-area: 1 / 1; min-width: 0; padding: clamp(10px, 2.2 * var(--landing-vh), 20px) 20px; visibility: hidden; }
+.console-pane.active { visibility: inherit; }
+/* A line that is too long for the panel is folded; copying still gives the original lines. */
+.console-pane pre { margin: 0; font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; line-height: 1.7; color: #b8cae7; tab-size: 4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.code-flag { color: #7d879a; }
+/* The two values to change: the address and the key. Padding and an equal negative margin widen the
+   highlight without moving the monospace columns. */
+.code-address, .code-placeholder { margin: 0 -3px; padding: 1px 3px; border-radius: 3px; background: rgba(59, 130, 246, .28); color: #fff; }
+.copy-error { padding: 10px 20px; font-size: 14px; color: #ffbe9d; }
+
+/* Tools: three steps, then the tools a key can be set up for. */
+.tool-steps { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--landing-line); }
+.tool-steps li { display: flex; align-items: center; gap: 14px; min-height: clamp(44px, 8 * var(--landing-vh), 68px); border-top: 1px solid var(--landing-line); font-size: clamp(16px, 2.6 * var(--landing-vh), 19px); line-height: 1.5; color: #e6e8ee; }
+/* A step that has to fold on a narrow screen folds into even lines. */
+.tool-steps li>span:last-child { text-wrap: balance; }
+.tool-names { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 18px; margin: 0; font-size: 15px; line-height: 1.8; color: #c9cfda; }
+.tool-names span { white-space: nowrap; }
+.tool-names em { font-style: normal; font-size: 13px; color: #8e97a8; white-space: nowrap; }
+
+/* Pricing: one formula across the screen, in the sky over the horizon. */
+.screen-center { align-items: center; text-align: center; }
+.screen-center .section-kicker { justify-content: center; }
+.formula { width: 100%; min-width: 0; }
+.formula-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0 .42em; margin: 0; font-size: clamp(24px, min(5.2 * var(--landing-vh), 3.5vw), 44px); font-weight: 500; line-height: 1.4; letter-spacing: -.01em; }
+/* A sign stays with what follows it when the line is folded. */
+.formula-part { display: inline-flex; align-items: baseline; gap: .42em; white-space: nowrap; }
+.formula-cost { color: #a9b1bf; }
+.formula-sign { font-weight: 400; color: #7f8899; }
+.formula-term { color: #f6f7f9; }
+.formula-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 32px; max-width: 900px; margin: var(--screen-gap) auto 0; text-align: left; }
+.formula-note { padding-top: clamp(8px, 1.6 * var(--landing-vh), 14px); border-top: 1px solid var(--landing-line); }
+.formula-note dt { font-size: 14px; line-height: 1.5; color: #9dc4ff; }
+.formula-note dd { margin: 4px 0 0; font-size: 15px; line-height: 1.7; color: var(--landing-muted); text-wrap: pretty; }
+.screen-center .screen-foot { flex-direction: column; gap: var(--screen-gap-small); }
+.screen-center .screen-note { max-width: 46em; }
+.pay-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 12px; margin: 0; padding: 0; list-style: none; }
+.pay-list li { padding: 5px 14px; border: 1px solid #ffffff1f; border-radius: 8px; background: rgba(13, 15, 21, .6); font-size: 15px; line-height: 1.6; color: #dfe3ea; }
+
+/* Control: what a key's limits and one usage record look like. An illustration, and labelled as one. */
+.sample { min-width: 0; padding: clamp(12px, 2.4 * var(--landing-vh), 20px) 20px; border: 1px solid #30333e; border-radius: 14px; background: rgba(13, 15, 21, .86); }
+.sample-note { margin: 0 0 clamp(8px, 1.6 * var(--landing-vh), 14px); font-size: 13px; line-height: 1.6; color: #a7b4c8; }
+.sample-meter { height: 6px; border-radius: 3px; background: rgba(229, 231, 235, .14); overflow: hidden; }
+.sample-meter span { display: block; width: 24%; height: 100%; border-radius: 3px; background: #6ea8ff; transform-origin: 0 50%; }
+.sample-figures { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 16px; margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #dfe3ea; font-variant-numeric: tabular-nums; }
+.sample-limits { display: flex; flex-wrap: wrap; gap: 8px; margin: clamp(8px, 1.8 * var(--landing-vh), 14px) 0 0; padding: 0; list-style: none; }
+.sample-limits li { padding: 3px 12px; border: 1px solid #ffffff1f; border-radius: 6px; font-size: 14px; line-height: 1.6; color: #c9cfda; white-space: nowrap; }
+.sample-record { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 12px; margin: clamp(10px, 2 * var(--landing-vh), 16px) 0 0; padding-top: clamp(10px, 2 * var(--landing-vh), 14px); border-top: 1px solid #ffffff14; }
+.sample-record dt { font-size: 12px; line-height: 1.5; color: #8e97a8; }
+.sample-record dd { margin: 2px 0 0; font-size: 15px; line-height: 1.5; color: #eceef2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Questions: one answer at a time. All answers share one grid cell, so the screen keeps its height. */
+.faq { min-width: 0; }
+.faq-questions { display: flex; flex-direction: column; border-bottom: 1px solid var(--landing-line); }
+.faq-questions button { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: clamp(44px, 7.4 * var(--landing-vh), 60px); border-top: 1px solid var(--landing-line); text-align: left; font-size: clamp(16px, 2.6 * var(--landing-vh), 19px); line-height: 1.5; color: #a4adbc; transition: color .2s; }
+.faq-questions button::after { content: ''; flex-shrink: 0; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: #6ea8ff; opacity: 0; transform: scale(.4); transition: opacity .25s, transform .35s var(--landing-ease); }
+.faq-questions button:hover { color: #e6e8ee; }
+.faq-questions button.active { color: #f2f3f5; }
+.faq-questions button.active::after { opacity: 1; transform: scale(1); }
+.faq-answers { display: grid; margin-top: clamp(10px, 2.4 * var(--landing-vh), 22px); }
+.faq-answer { grid-area: 1 / 1; max-width: 34em; margin: 0; font-size: clamp(16px, 2.3 * var(--landing-vh), 17px); line-height: 1.8; color: #c5cad4; text-wrap: pretty; visibility: hidden; opacity: 0; transition: opacity .3s; }
+.faq-answer.active { visibility: inherit; opacity: 1; }
+/* Each sentence is kept whole where it fits, so a line never ends a character or two into the next. */
+.faq-answer>span { display: inline-block; }
+
+/* Last screen: the closing line in the sky and the sunrise under it. Its words stand in the upper part
+   of the screen, so that the planet has the lower. */
+.landing-closing { justify-content: flex-start; padding-top: calc(var(--landing-header-height) + clamp(14px, 9 * var(--landing-vh), 120px)); text-align: center; }
+.closing-content { display: flex; flex-direction: column; align-items: center; }
+.closing-content>img { width: auto; height: clamp(40px, 8 * var(--landing-vh), 68px); margin-bottom: var(--screen-gap); }
+.landing-closing h2 { font-size: min(clamp(36px, 3.8vw, 54px), max(32px, 7 * var(--landing-vh))); line-height: 1.4; }
+.closing-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 0; margin: var(--screen-gap) 0 0; padding: 0; list-style: none; font-size: clamp(15px, 2.4 * var(--landing-vh), 17px); line-height: 1.7; color: #c5cad4; }
+.closing-steps li { white-space: nowrap; }
+.closing-steps li+li::before { content: '→'; margin: 0 12px; color: #7f8899; }
+.closing-content .landing-button { margin-top: var(--screen-gap); }
+
+/* The footer comes up over the sunrise when the page is scrolled past the last screen. */
+.landing-footer { scroll-snap-align: end; background: linear-gradient(180deg, rgba(8, 8, 13, 0) 0, rgba(8, 8, 13, .74) 40%, rgba(8, 8, 13, .92) 100%); }
+.landing-footer>.landing-container { padding-top: 36px; padding-bottom: 17px; border-top: 1px solid rgba(229, 231, 235, .1); }
+.footer-top { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.footer-top .landing-brand > .gabugu-wordmark { font-size: 19px; }
+.footer-top>div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 28px; font-size: 14px; color: #b5bbc6; }
+.footer-top>div a { display: inline-flex; align-items: center; min-height: 44px; }
+.footer-top a:hover, .footer-bottom a:hover { color: #fff; }
+.footer-disclaimer { max-width: 62em; margin: 10px 0 0; font-size: 14px; line-height: 1.7; color: #98a1b1; text-wrap: pretty; }
+/* The links in the last row are small type but 44px tall to the touch; the spacing around the row allows for that. */
+.footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; font-size: 12px; line-height: 1.8; color: #a3a9b5; }
+.footer-credits { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 20px; }
+.footer-credits a { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ── A screen's ground, and where its words stand ──────────────────────────────────────────────────────
+   The picture behind the page is bright in places, so a screen's words carry a dark ground of their own.
+   It belongs to the screen and fades with it. HomeView measures how far the words reach and tells the
+   picture, which puts the planet beyond them. */
+.landing-screen::before { content: ''; position: absolute; z-index: -1; inset: -45% 0; pointer-events: none; }
+/* Words that stand over a horizon are set in the upper part of the screen; the planet has the lower. */
+.landing-screen[data-earth="below"]:not(.landing-hero) { justify-content: flex-start; }
+
+@media (min-width: 1021px) and (min-aspect-ratio: 21/20) {
+  /* The words are a column on the left and the planet stands to their right. The column starts where the
+     page's content starts and takes half of its width at most. */
+  .landing-screen[data-earth="beside"] .screen-column { width: min(560px, min(100% - var(--landing-gutter) * 2, 1240px) / 2); margin-inline: max(var(--landing-gutter), (100% - 1240px) / 2) auto; }
+  /* Dark as far as the column reaches (--landing-words, measured by HomeView), running out to the right. */
+  .landing-screen[data-earth="beside"]::before { background: linear-gradient(90deg, rgba(8, 8, 13, .92) 0, rgba(8, 8, 13, .88) calc(var(--landing-words, 46%) - 12%), rgba(8, 8, 13, .4) calc(var(--landing-words, 46%) + 2%), rgba(8, 8, 13, 0) calc(var(--landing-words, 46%) + 14%)); }
+}
+@media (max-width: 1020px), (max-aspect-ratio: 21/20) {
+  /* The words stand at the bottom of the screen and the planet rises above them. Their ground begins a
+     little above them and runs to the screen's lower edge. */
+  .gabugu-landing.staged .landing-screen[data-earth="beside"] { justify-content: flex-end; }
+  .landing-screen[data-earth="beside"] .screen-column { position: relative; }
+  .landing-screen[data-earth="beside"] .screen-column::before { content: ''; position: absolute; z-index: -1; inset: -88px calc(50% - 50vw) -60vh; pointer-events: none; background: linear-gradient(180deg, rgba(8, 8, 13, 0) 0, rgba(8, 8, 13, .82) 88px, rgba(8, 8, 13, .92) 220px, rgba(8, 8, 13, .92) 100%); }
+  /* Where the page scrolls freely the next screen follows at once, so the ground ends with its own screen. */
+  .gabugu-landing[data-paging="free"] .landing-screen[data-earth="beside"] .screen-column::before { bottom: calc(-1 * var(--screen-pad)); }
+  /* The dots would stand on the words; the count alone stays, under the header. */
+  .screen-dots { top: calc(var(--landing-header-height) + 2px); right: calc(var(--landing-gutter) - 10px); padding: 2px 10px; transform: none; }
+  .screen-dots button { display: none; }
+  .screen-count { margin-top: 0; }
+}
+
+/* A short window drops each screen's line of description: the heading says the same. */
+.section-description { max-height: var(--if-roomy); overflow: hidden; }
+
+@media (max-width: 1200px) {
+  .gabugu-landing { --landing-gutter: 40px; }
+  .landing-nav { gap: 24px; }
+  .landing-nav-links { gap: 20px; }
+  .landing-nav-actions { gap: 16px; }
+}
+@media (max-width: 1020px) {
+  .landing-nav-links { display: none; }
+  .landing-nav-actions { margin-left: auto; }
+}
+@media (max-width: 900px) {
+  .hero-ground { max-height: clamp(210px, 36 * var(--landing-vh), 400px); }
+}
+@media (max-width: 720px) {
+  /* A phone has less room than a desktop of the same height: the words stand under the planet. */
+  .gabugu-landing { --landing-gutter: 24px; --landing-header-height: 76px; --if-roomy: clamp(0px, (100 * var(--landing-vh) - 700px) * 999, 999px); }
+  .landing-nav { gap: 16px; }
+  .landing-brand { gap: 9px; }
+  .landing-brand img { width: 28px; height: 34px; }
+  .landing-brand > .gabugu-wordmark { font-size: 19px; }
+  .landing-nav-actions { gap: 12px; }
+  .landing-nav-actions :deep(button) { padding-inline: 4px; }
+  .landing-sign-in { display: none; }
+  .landing-button-small { min-height: 44px; padding-inline: 16px; font-size: 14px; }
+  .landing-button-small svg { display: none; }
+  .hero-eyebrow { letter-spacing: .12em; }
+  .landing-hero h1 { font-size: min(clamp(44px, 10.6vw, 60px), max(40px, 9 * var(--landing-vh))); }
+  .gabugu-landing:lang(en) .landing-hero h1 { font-size: min(clamp(38px, 8.2vw, 54px), max(34px, 8 * var(--landing-vh))); letter-spacing: -.05em; }
+  .hero-description { max-width: 24em; font-size: clamp(16px, 2.6 * var(--landing-vh), 17px); line-height: 1.85; }
+  .hero-actions { gap: 8px 24px; }
+  .hero-actions .landing-button { min-height: 50px; padding-inline: 22px; }
+  .hero-foot { gap: 16px; }
+  .section-kicker { font-size: 13px; }
+  .landing-screen h2 { font-size: 32px; line-height: 1.35; letter-spacing: -.025em; }
+  .gabugu-landing:lang(en) .landing-screen h2 { font-size: 30px; }
+  /* On a phone the planet needs the room: what a screen can do without is left out. */
+  .provider-example { gap: 12px; min-height: clamp(44px, 7.2 * var(--landing-vh), 56px); }
+  .provider-company { display: none; }
+  #connect .section-description, #connect .screen-note, #pricing .pay-list, #pricing .screen-note, #models .screen-note { display: none; }
+  .console-bar { padding: 0 4px 0 16px; }
+  .protocol-tabs { gap: 18px; }
+  .console-language { display: none; }
+  .console-pane { padding-inline: 16px; }
+  .console-pane pre { font-size: 12px; }
+  .tool-steps li { min-height: clamp(44px, 7 * var(--landing-vh), 56px); font-size: 16px; }
+  .formula-line { font-size: clamp(22px, 6.4vw, 28px); }
+  /* In English the formula does not fit one line of a phone: it breaks before the second sign. */
+  .gabugu-landing:lang(en) .formula-line { max-width: 13em; margin-inline: auto; }
+  /* Each term's note takes one line; the term's name, which the formula shows, is left to screen readers. */
+  .formula-notes { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: var(--screen-gap-small); }
+  .formula-note { padding-block: 8px; }
+  .formula-note dt { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .formula-note dd { margin: 0; font-size: 16px; }
+  .sample { padding-inline: 16px; }
+  .sample-record { gap: 8px; }
+  .faq-questions button { font-size: 16px; }
+  .closing-steps li+li::before { margin: 0 8px; }
+  .footer-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .footer-top>div { justify-content: flex-start; gap: 0 24px; }
+  .footer-bottom { flex-wrap: wrap; row-gap: 0; }
+  .footer-credits { justify-content: flex-start; }
+}
+@media (max-width: 374px) {
+  .gabugu-landing { --landing-gutter: 20px; }
+  .landing-nav-actions { gap: 8px; }
+  .landing-brand > .gabugu-wordmark { font-size: 17px; }
+  .landing-brand img { width: 24px; }
+  .landing-button-small { padding-inline: 12px; }
+  .hero-actions { gap: 8px 16px; }
+  .hero-actions .landing-button { padding-inline: 18px; }
+  .hero-actions .landing-text-link { font-size: 15px; }
+  .landing-screen h2 { font-size: 30px; }
+  .provider-model { font-size: 20px; }
+}
+/* A phone held sideways: the headline takes one line so the planet still shows on the first screen. */
+@media (max-height: 520px) and (min-width: 560px) {
+  .hero-line { display: inline-block; vertical-align: top; }
+  .hero-line+.hero-line { margin-top: 0; }
+  .gabugu-landing:lang(en) .hero-line:first-child { margin-right: .28em; }
+  .hero-ground { flex-basis: 96px; min-height: 96px; max-height: 150px; }
+}
+/* In free-scroll, static fallback, or reduced motion modes adjacent screens stay at full opacity, so
+   each screen's dark backdrop must stay inside its own bounds and never bleed over the hero actions. */
+.gabugu-landing[data-paging="free"] .landing-screen::before,
+.gabugu-landing:not(.staged) .landing-screen::before { inset: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .landing-screen::before { inset: 0; }
+  .gabugu-landing *, .gabugu-landing *::before, .gabugu-landing *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 900px) {
+  .home-floating-campaign { display: none; }
+  .hero-campaign { display: block; }
+  .hero-ground { flex: 1 0 auto; flex-direction: column; align-items: stretch; justify-content: flex-end; max-height: none; }
+}

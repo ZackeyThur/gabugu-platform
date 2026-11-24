@@ -1,0 +1,1113 @@
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useAppStore } from '@/stores/app'
+import { opsAPI } from '@/api/admin/ops'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+import Select from '@/components/common/Select.vue'
+import Toggle from '@/components/common/Toggle.vue'
+import type {
+  OpsAlertRuntimeSettings,
+  EmailNotificationConfig,
+  AlertSeverity,
+  OpsAdvancedSettings,
+  OpsMetricThresholds,
+  OpsAIDiagnosisConfig,
+  OpsPrivateWebhookConfig
+} from '../types'
+
+const { t, locale } = useI18n()
+const appStore = useAppStore()
+
+const props = defineProps<{
+  show: boolean
+}>()
+
+const emit = defineEmits<{
+  close: []
+  saved: []
+}>()
+
+const loading = ref(false)
+const settingsLoaded = ref(false)
+const saving = ref(false)
+const sendingTestAlert = ref(false)
+
+// 运行时设置
+const runtimeSettings = ref<OpsAlertRuntimeSettings | null>(null)
+// 邮件通知配置
+const emailConfig = ref<EmailNotificationConfig | null>(null)
+// 高级设置
+const advancedSettings = ref<OpsAdvancedSettings | null>(null)
+// 指标阈值配置
+const metricThresholds = ref<OpsMetricThresholds>({
+  sla_percent_min: 99.5,
+  ttft_p99_ms_max: 500,
+  request_error_rate_percent_max: 5,
+  upstream_error_rate_percent_max: 5
+})
+
+function defaultAIDiagnosisConfig(): OpsAIDiagnosisConfig {
+  return {
+    enabled: false,
+    base_url: '',
+    model: '',
+    api_key: '',
+    api_key_configured: false,
+    api_key_masked: '',
+    clear_api_key: false,
+    fallback_base_url: '',
+    fallback_model: '',
+    fallback_api_key: '',
+    fallback_api_key_configured: false,
+    fallback_api_key_masked: '',
+    clear_fallback_api_key: false,
+    timeout_seconds: 8
+  }
+}
+
+function defaultPrivateWebhookConfig(): OpsPrivateWebhookConfig {
+  return {
+    enabled: false,
+    url: '',
+    target: '',
+    bearer_token: '',
+    token_configured: false,
+    token_masked: '',
+    clear_token: false,
+    include_reports: false
+  }
+}
+
+function normalizeEmailConfig(raw: EmailNotificationConfig): EmailNotificationConfig {
+  const rawAlert = (raw.alert || {}) as Partial<EmailNotificationConfig['alert']>
+  const alert: EmailNotificationConfig['alert'] = {
+    enabled: rawAlert.enabled ?? false,
+    recipients: Array.isArray(rawAlert.recipients) ? [...rawAlert.recipients] : [],
+    min_severity: rawAlert.min_severity ?? '',
+    rate_limit_per_hour: rawAlert.rate_limit_per_hour ?? 10,
+    batching_window_seconds: rawAlert.batching_window_seconds ?? 0,
+    include_resolved_alerts: rawAlert.include_resolved_alerts ?? false
+  }
+
+  const rawReport = (raw.report || {}) as Partial<EmailNotificationConfig['report']>
+  const report: EmailNotificationConfig['report'] = {
+    enabled: rawReport.enabled ?? false,
+    recipients: Array.isArray(rawReport.recipients) ? [...rawReport.recipients] : [],
+    daily_summary_enabled: rawReport.daily_summary_enabled ?? false,
+    daily_summary_schedule: rawReport.daily_summary_schedule ?? '0 9 * * *',
+    weekly_summary_enabled: rawReport.weekly_summary_enabled ?? false,
+    weekly_summary_schedule: rawReport.weekly_summary_schedule ?? '0 9 * * 1',
+    error_digest_enabled: rawReport.error_digest_enabled ?? false,
+    error_digest_schedule: rawReport.error_digest_schedule ?? '0 9 * * *',
+    error_digest_min_count: rawReport.error_digest_min_count ?? 10,
+    account_health_enabled: rawReport.account_health_enabled ?? false,
+    account_health_schedule: rawReport.account_health_schedule ?? '0 9 * * *',
+    account_health_error_rate_threshold: rawReport.account_health_error_rate_threshold ?? 20
+  }
+
+  const rawAI = (raw.ai_diagnosis || {}) as Partial<OpsAIDiagnosisConfig>
+  const rawWH = (raw.private_webhook || {}) as Partial<OpsPrivateWebhookConfig>
+
+  return {
+    ...raw,
+    alert,
+    report,
+    ai_diagnosis: {
+      ...defaultAIDiagnosisConfig(),
+      ...rawAI,
+      api_key: '',
+      clear_api_key: false,
+      fallback_api_key: '',
+      clear_fallback_api_key: false
+    },
+    private_webhook: {
+      ...defaultPrivateWebhookConfig(),
+      ...rawWH,
+      bearer_token: '',
+      clear_token: false
+    }
+  }
+}
+
+function isValidHttpUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw.trim())
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.host
+  } catch {
+    return false
+  }
+}
+
+function hasDisallowedChatroomTarget(target: string): boolean {
+  return target.trim().toLowerCase().includes('@chatroom')
+}
+
+// 加载所有配置
+async function loadAllSettings() {
+  settingsLoaded.value = false
+  loading.value = true
+  try {
+    const [runtime, email, advanced, thresholds] = await Promise.all([
+      opsAPI.getAlertRuntimeSettings(),
+      opsAPI.getEmailNotificationConfig(),
+      opsAPI.getAdvancedSettings(),
+      opsAPI.getMetricThresholds()
+    ])
+    runtimeSettings.value = {
+      ...runtime,
+      min_sample_requests: runtime.min_sample_requests ?? 0,
+      min_error_count: runtime.min_error_count ?? 0
+    }
+    emailConfig.value = normalizeEmailConfig(email)
+    advancedSettings.value = advanced
+    // 兼容旧 payload：后端未返回该字段时补默认值，保证表单可绑定
+    if (advancedSettings.value && !advancedSettings.value.openai_account_quota_auto_pause) {
+      advancedSettings.value.openai_account_quota_auto_pause = { default_threshold_5h: 0, default_threshold_7d: 0 }
+    }
+    // 如果后端返回了阈值，使用后端的值；否则保持默认值
+    if (thresholds && Object.keys(thresholds).length > 0) {
+        metricThresholds.value = {
+          sla_percent_min: thresholds.sla_percent_min ?? 99.5,
+          ttft_p99_ms_max: thresholds.ttft_p99_ms_max ?? 500,
+          request_error_rate_percent_max: thresholds.request_error_rate_percent_max ?? 5,
+          upstream_error_rate_percent_max: thresholds.upstream_error_rate_percent_max ?? 5
+        }
+    }
+    settingsLoaded.value = true
+  } catch (err: any) {
+    console.error('[OpsSettingsDialog] Failed to load settings', err)
+    appStore.showError(err?.response?.data?.detail || t('admin.ops.settings.loadFailed'))
+  } finally {
+    loading.value = false
+  }
+}
+
+async function sendTestAlert() {
+  if (loading.value || !settingsLoaded.value || sendingTestAlert.value) return
+  sendingTestAlert.value = true
+  try {
+    const res = await opsAPI.sendTestAlertEmail({ locale: locale?.value || 'zh' })
+    appStore.showSuccess(
+      t('admin.ops.email.testAlertSuccess', {
+        recipient: res.recipient,
+        mode: res.diagnosis_badge
+      })
+    )
+  } catch (err: any) {
+    console.error('[OpsSettingsDialog] Failed to send test alert email', err)
+    appStore.showError(
+      err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        t('admin.ops.email.testAlertFailed')
+    )
+  } finally {
+    sendingTestAlert.value = false
+  }
+}
+
+// 监听弹窗打开
+watch(() => props.show, (show) => {
+  if (show) {
+    loadAllSettings()
+  }
+})
+
+// 邮件输入
+const alertRecipientInput = ref('')
+const reportRecipientInput = ref('')
+
+// 严重级别选项
+const severityOptions: Array<{ value: AlertSeverity | ''; label: string }> = [
+  { value: '', label: t('admin.ops.email.minSeverityAll') },
+  { value: 'critical', label: t('common.critical') },
+  { value: 'warning', label: t('common.warning') },
+  { value: 'info', label: t('common.info') }
+]
+
+// 验证邮箱
+function isValidEmailAddress(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+// 添加收件人
+function addRecipient(target: 'alert' | 'report') {
+  if (!emailConfig.value) return
+  const raw = (target === 'alert' ? alertRecipientInput.value : reportRecipientInput.value).trim()
+  if (!raw) return
+
+  if (!isValidEmailAddress(raw)) {
+    appStore.showError(t('common.invalidEmail'))
+    return
+  }
+
+  const normalized = raw.toLowerCase()
+  const list = target === 'alert' ? emailConfig.value.alert.recipients : emailConfig.value.report.recipients
+  if (!list.includes(normalized)) {
+    list.push(normalized)
+  }
+  if (target === 'alert') alertRecipientInput.value = ''
+  else reportRecipientInput.value = ''
+}
+
+// 移除收件人
+function removeRecipient(target: 'alert' | 'report', email: string) {
+  if (!emailConfig.value) return
+  const list = target === 'alert' ? emailConfig.value.alert.recipients : emailConfig.value.report.recipients
+  const idx = list.indexOf(email)
+  if (idx >= 0) list.splice(idx, 1)
+}
+
+// OpenAI 账号配额自动暂停：后端按 0~1 分数存储，UI 按百分比(0~100)展示
+const quotaAutoPause5hPercent = computed<number | null>({
+  get() {
+    const v = advancedSettings.value?.openai_account_quota_auto_pause?.default_threshold_5h
+    return v && v > 0 ? Math.round(v * 1000) / 10 : null
+  },
+  set(val) {
+    if (!advancedSettings.value?.openai_account_quota_auto_pause) return
+    advancedSettings.value.openai_account_quota_auto_pause.default_threshold_5h = val != null && val > 0 ? val / 100 : 0
+  }
+})
+const quotaAutoPause7dPercent = computed<number | null>({
+  get() {
+    const v = advancedSettings.value?.openai_account_quota_auto_pause?.default_threshold_7d
+    return v && v > 0 ? Math.round(v * 1000) / 10 : null
+  },
+  set(val) {
+    if (!advancedSettings.value?.openai_account_quota_auto_pause) return
+    advancedSettings.value.openai_account_quota_auto_pause.default_threshold_7d = val != null && val > 0 ? val / 100 : 0
+  }
+})
+
+const privateTargetIsChatroom = computed(() => {
+  return hasDisallowedChatroomTarget(emailConfig.value?.private_webhook?.target || '')
+})
+
+// 验证
+const validation = computed(() => {
+  const errors: string[] = []
+
+  // 验证运行时设置
+  if (runtimeSettings.value) {
+    const evalSeconds = runtimeSettings.value.evaluation_interval_seconds
+    if (!Number.isFinite(evalSeconds) || evalSeconds < 1 || evalSeconds > 86400) {
+      errors.push(t('admin.ops.runtime.validation.evalIntervalRange'))
+    }
+    const minSamples = runtimeSettings.value.min_sample_requests ?? 0
+    if (!Number.isInteger(minSamples) || minSamples < 0 || minSamples > 1000000) {
+      errors.push(t('admin.ops.runtime.validation.minSampleRequestsRange'))
+    }
+    const minErrors = runtimeSettings.value.min_error_count ?? 0
+    if (!Number.isInteger(minErrors) || minErrors < 0 || minErrors > 1000000) {
+      errors.push(t('admin.ops.runtime.validation.minErrorCountRange'))
+    }
+  }
+
+  // 邮件配置: 启用但无收件人时不阻断保存, 保存时会自动禁用
+  if (emailConfig.value) {
+    const rateLimit = emailConfig.value.alert.rate_limit_per_hour
+    if (rateLimit != null && !(typeof rateLimit === 'number' && Number.isFinite(rateLimit) && rateLimit >= 0)) {
+      errors.push(t('admin.ops.email.validation.rateLimitRange'))
+    }
+
+    const ai = emailConfig.value.ai_diagnosis
+    if (ai) {
+      const timeout = ai.timeout_seconds
+      if (!(typeof timeout === 'number' && Number.isInteger(timeout) && timeout >= 3 && timeout <= 30)) {
+        errors.push(t('admin.ops.email.validation.aiTimeoutRange'))
+      }
+      if (ai.enabled) {
+        if (!isValidHttpUrl(ai.base_url || '')) {
+          errors.push(t('admin.ops.email.validation.aiBaseUrlInvalid'))
+        }
+        if (!ai.model || !ai.model.trim()) {
+          errors.push(t('admin.ops.email.validation.aiModelRequired'))
+        }
+        const hasEnteredKey = Boolean(!ai.clear_api_key && ai.api_key && ai.api_key.trim())
+        const keepsExistingKey = Boolean(ai.api_key_configured && !ai.clear_api_key)
+        if (!hasEnteredKey && !keepsExistingKey) {
+          errors.push(t('admin.ops.email.validation.aiApiKeyRequired'))
+        }
+      }
+      const fbUrl = (ai.fallback_base_url || '').trim()
+      const fbModel = (ai.fallback_model || '').trim()
+      if (fbUrl) {
+        if (!isValidHttpUrl(fbUrl)) {
+          errors.push(t('admin.ops.email.validation.aiFallbackBaseUrlInvalid'))
+        }
+        if (!fbModel) {
+          errors.push(t('admin.ops.email.validation.aiFallbackModelRequired'))
+        }
+      } else if (fbModel) {
+        errors.push(t('admin.ops.email.validation.aiFallbackBaseUrlInvalid'))
+      }
+    }
+
+    const wh = emailConfig.value.private_webhook
+    if (wh) {
+      if (hasDisallowedChatroomTarget(wh.target || '')) {
+        errors.push(t('admin.ops.email.validation.privateWebhookChatroomBlocked'))
+      }
+      if (wh.enabled) {
+        if (!isValidHttpUrl(wh.url || '')) {
+          errors.push(t('admin.ops.email.validation.privateWebhookUrlInvalid'))
+        }
+        if (!wh.target || !wh.target.trim()) {
+          errors.push(t('admin.ops.email.validation.privateWebhookTargetRequired'))
+        }
+      }
+    }
+  }
+
+  // 验证高级设置
+  if (advancedSettings.value) {
+    const { error_log_retention_days, minute_metrics_retention_days, hourly_metrics_retention_days } = advancedSettings.value.data_retention
+    if (error_log_retention_days < 0 || error_log_retention_days > 365) {
+      errors.push(t('admin.ops.settings.validation.retentionDaysRange'))
+    }
+    if (minute_metrics_retention_days < 0 || minute_metrics_retention_days > 365) {
+      errors.push(t('admin.ops.settings.validation.retentionDaysRange'))
+    }
+    if (hourly_metrics_retention_days < 0 || hourly_metrics_retention_days > 365) {
+      errors.push(t('admin.ops.settings.validation.retentionDaysRange'))
+    }
+
+    const { default_threshold_5h, default_threshold_7d } = advancedSettings.value.openai_account_quota_auto_pause
+    if (default_threshold_5h < 0 || default_threshold_5h > 1 || default_threshold_7d < 0 || default_threshold_7d > 1) {
+      errors.push(t('admin.ops.settings.validation.openaiQuotaAutoPauseRange'))
+    }
+  }
+
+  // 验证指标阈值
+  if (metricThresholds.value.sla_percent_min != null && (metricThresholds.value.sla_percent_min < 0 || metricThresholds.value.sla_percent_min > 100)) {
+    errors.push(t('admin.ops.settings.validation.slaMinPercentRange'))
+  }
+  if (metricThresholds.value.ttft_p99_ms_max != null && metricThresholds.value.ttft_p99_ms_max < 0) {
+    errors.push(t('admin.ops.settings.validation.ttftP99MaxRange'))
+  }
+  if (metricThresholds.value.request_error_rate_percent_max != null && (metricThresholds.value.request_error_rate_percent_max < 0 || metricThresholds.value.request_error_rate_percent_max > 100)) {
+    errors.push(t('admin.ops.settings.validation.requestErrorRateMaxRange'))
+  }
+  if (metricThresholds.value.upstream_error_rate_percent_max != null && (metricThresholds.value.upstream_error_rate_percent_max < 0 || metricThresholds.value.upstream_error_rate_percent_max > 100)) {
+    errors.push(t('admin.ops.settings.validation.upstreamErrorRateMaxRange'))
+  }
+
+  return { valid: errors.length === 0, errors }
+})
+
+// 保存所有配置
+async function saveAllSettings() {
+  if (loading.value || !settingsLoaded.value || saving.value) return
+  if (!validation.value.valid) {
+    appStore.showError(validation.value.errors[0])
+    return
+  }
+
+  saving.value = true
+  try {
+    // 无收件人时自动禁用邮件通知
+    if (emailConfig.value) {
+      if (emailConfig.value.alert.enabled && emailConfig.value.alert.recipients.length === 0) {
+        emailConfig.value.alert.enabled = false
+      }
+      if (emailConfig.value.report.enabled && emailConfig.value.report.recipients.length === 0) {
+        emailConfig.value.report.enabled = false
+      }
+    }
+    await Promise.all([
+      runtimeSettings.value ? opsAPI.updateAlertRuntimeSettings(runtimeSettings.value) : Promise.resolve(),
+      emailConfig.value ? opsAPI.updateEmailNotificationConfig(emailConfig.value) : Promise.resolve(),
+      advancedSettings.value ? opsAPI.updateAdvancedSettings(advancedSettings.value) : Promise.resolve(),
+      opsAPI.updateMetricThresholds(metricThresholds.value)
+    ])
+    appStore.showSuccess(t('admin.ops.settings.saveSuccess'))
+    emit('saved')
+    emit('close')
+  } catch (err: any) {
+    console.error('[OpsSettingsDialog] Failed to save settings', err)
+    appStore.showError(err?.response?.data?.message || err?.response?.data?.detail || t('admin.ops.settings.saveFailed'))
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <BaseDialog :show="show" :title="t('admin.ops.settings.title')" width="extra-wide" @close="emit('close')">
+    <div v-if="loading" class="py-10 text-center text-sm text-gray-500">
+      {{ t('common.loading') }}
+    </div>
+
+    <div v-else-if="runtimeSettings && emailConfig && advancedSettings" class="space-y-6">
+      <!-- 验证错误 -->
+      <div v-if="!validation.valid" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+        <div class="font-bold">{{ t('admin.ops.settings.validation.title') }}</div>
+        <ul class="mt-1 list-disc space-y-1 pl-4">
+          <li v-for="msg in validation.errors" :key="msg">{{ msg }}</li>
+        </ul>
+      </div>
+
+      <!-- 数据采集频率与低流量防误报门槛 -->
+      <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-700/50">
+        <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.settings.dataCollection') }}</h4>
+        <div class="space-y-4">
+          <div>
+            <label class="input-label">{{ t('admin.ops.settings.evaluationInterval') }}</label>
+            <input
+              v-model.number="runtimeSettings.evaluation_interval_seconds"
+              type="number"
+              min="1"
+              max="86400"
+              class="input"
+            />
+            <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.evaluationIntervalHint') }}</p>
+          </div>
+
+          <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
+            <div class="mb-1 text-xs font-semibold text-gray-800 dark:text-gray-200">{{ t('admin.ops.runtime.noiseGuardTitle') }}</div>
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.runtime.noiseGuardHint') }}</p>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="input-label">{{ t('admin.ops.runtime.minSampleRequests') }}</label>
+                <input
+                  v-model.number="runtimeSettings.min_sample_requests"
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  step="1"
+                  class="input"
+                  placeholder="10"
+                  data-testid="ops-min-sample-requests"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.runtime.minSampleRequestsHint') }}</p>
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.ops.runtime.minErrorCount') }}</label>
+                <input
+                  v-model.number="runtimeSettings.min_error_count"
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  step="1"
+                  class="input"
+                  placeholder="3"
+                  data-testid="ops-min-error-count"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.runtime.minErrorCountHint') }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 预警配置 -->
+      <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-700/50">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.settings.alertConfig') }}</h4>
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            data-testid="ops-send-test-alert-btn"
+            :disabled="loading || !settingsLoaded || sendingTestAlert || emailConfig.alert.recipients.length === 0"
+            @click="sendTestAlert"
+          >
+            {{ sendingTestAlert ? t('admin.ops.email.sendingTestAlert') : t('admin.ops.email.sendTestAlert') }}
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="font-medium text-gray-900 dark:text-white">{{ t('admin.ops.settings.enableAlert') }}</label>
+            </div>
+            <Toggle v-model="emailConfig.alert.enabled" />
+          </div>
+
+          <div v-if="emailConfig.alert.enabled">
+            <label class="input-label">{{ t('admin.ops.settings.alertRecipients') }}</label>
+            <div class="flex gap-2">
+              <input
+                v-model="alertRecipientInput"
+                type="email"
+                class="input"
+                :placeholder="t('admin.ops.settings.emailPlaceholder')"
+                @keydown.enter.prevent="addRecipient('alert')"
+              />
+              <button class="btn btn-secondary whitespace-nowrap" type="button" @click="addRecipient('alert')">
+                {{ t('common.add') }}
+              </button>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span
+                v-for="email in emailConfig.alert.recipients"
+                :key="email"
+                class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+              >
+                {{ email }}
+                <button type="button" class="text-blue-700/80 hover:text-blue-900" @click="removeRecipient('alert', email)">×</button>
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.ops.settings.recipientsHint') }}
+            </p>
+          </div>
+
+          <div v-if="emailConfig.alert.enabled" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="input-label">{{ t('admin.ops.settings.minSeverity') }}</label>
+              <Select v-model="emailConfig.alert.min_severity" :options="severityOptions" />
+            </div>
+            <div>
+              <label class="input-label">{{ t('admin.ops.email.rateLimitPerHour') }}</label>
+              <input
+                v-model.number="emailConfig.alert.rate_limit_per_hour"
+                type="number"
+                min="0"
+                max="100000"
+                class="input"
+              />
+            </div>
+          </div>
+
+          <div v-if="emailConfig.alert.enabled" class="flex items-center justify-between">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.email.includeResolved') }}</label>
+            <Toggle v-model="emailConfig.alert.include_resolved_alerts" />
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 智能诊断（主备双线路 + 自动兜底） -->
+      <div v-if="emailConfig.ai_diagnosis" class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-700/50">
+        <div class="mb-3 flex items-start justify-between gap-4">
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.email.aiDiagnosisTitle') }}</h4>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.email.aiDiagnosisHint') }}</p>
+          </div>
+          <Toggle v-model="emailConfig.ai_diagnosis.enabled" />
+        </div>
+
+        <div v-if="emailConfig.ai_diagnosis.enabled" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="md:col-span-2">
+            <label class="input-label">{{ t('admin.ops.email.aiBaseUrl') }}</label>
+            <input
+              v-model="emailConfig.ai_diagnosis.base_url"
+              type="url"
+              class="input font-mono text-base sm:text-sm"
+              :placeholder="t('admin.ops.email.aiBaseUrlPlaceholder')"
+            />
+          </div>
+          <div>
+            <label class="input-label">{{ t('admin.ops.email.aiModel') }}</label>
+            <input
+              v-model="emailConfig.ai_diagnosis.model"
+              type="text"
+              class="input font-mono text-base sm:text-sm"
+              :placeholder="t('admin.ops.email.aiModelPlaceholder')"
+            />
+          </div>
+          <div>
+            <label class="input-label">{{ t('admin.ops.email.aiTimeoutSeconds') }}</label>
+            <input
+              v-model.number="emailConfig.ai_diagnosis.timeout_seconds"
+              type="number"
+              min="3"
+              max="30"
+              step="1"
+              class="input"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <div class="mb-1 flex items-center justify-between gap-2 text-xs font-medium text-gray-600 dark:text-gray-300">
+              <span>{{ t('admin.ops.email.aiApiKey') }}</span>
+              <span
+                v-if="emailConfig.ai_diagnosis.api_key_configured && !emailConfig.ai_diagnosis.clear_api_key"
+                class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+              >
+                {{ t('admin.ops.email.secretConfigured') }} ({{ emailConfig.ai_diagnosis.api_key_masked || '****' }})
+              </span>
+            </div>
+            <input
+              v-model="emailConfig.ai_diagnosis.api_key"
+              type="password"
+              autocomplete="new-password"
+              class="input font-mono text-base sm:text-sm"
+              :disabled="Boolean(emailConfig.ai_diagnosis.clear_api_key)"
+              :placeholder="
+                emailConfig.ai_diagnosis.api_key_configured
+                  ? t('admin.ops.email.aiApiKeyPlaceholderReplace', { masked: emailConfig.ai_diagnosis.api_key_masked || '****' })
+                  : t('admin.ops.email.aiApiKeyPlaceholderNew')
+              "
+            />
+            <label
+              v-if="emailConfig.ai_diagnosis.api_key_configured"
+              class="mt-1.5 inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+            >
+              <input v-model="emailConfig.ai_diagnosis.clear_api_key" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" />
+              <span>{{ t('admin.ops.email.clearSavedKey') }}</span>
+            </label>
+          </div>
+
+          <div class="md:col-span-2 border-t border-gray-200 pt-3 dark:border-dark-600">
+            <div class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ t('admin.ops.email.aiFallbackTitle') }}</div>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.email.aiFallbackHint') }}</p>
+          </div>
+          <div class="md:col-span-2">
+            <label class="input-label">{{ t('admin.ops.email.aiFallbackBaseUrl') }}</label>
+            <input
+              v-model="emailConfig.ai_diagnosis.fallback_base_url"
+              type="url"
+              class="input font-mono text-base sm:text-sm"
+              :placeholder="t('admin.ops.email.aiBaseUrlPlaceholder')"
+            />
+          </div>
+          <div>
+            <label class="input-label">{{ t('admin.ops.email.aiFallbackModel') }}</label>
+            <input
+              v-model="emailConfig.ai_diagnosis.fallback_model"
+              type="text"
+              class="input font-mono text-base sm:text-sm"
+              :placeholder="t('admin.ops.email.aiModelPlaceholder')"
+            />
+          </div>
+          <div>
+            <div class="mb-1 flex items-center justify-between gap-2 text-xs font-medium text-gray-600 dark:text-gray-300">
+              <span>{{ t('admin.ops.email.aiFallbackApiKey') }}</span>
+              <span
+                v-if="emailConfig.ai_diagnosis.fallback_api_key_configured && !emailConfig.ai_diagnosis.clear_fallback_api_key"
+                class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+              >
+                {{ t('admin.ops.email.secretConfigured') }} ({{ emailConfig.ai_diagnosis.fallback_api_key_masked || '****' }})
+              </span>
+            </div>
+            <input
+              v-model="emailConfig.ai_diagnosis.fallback_api_key"
+              type="password"
+              autocomplete="new-password"
+              class="input font-mono text-base sm:text-sm"
+              :disabled="Boolean(emailConfig.ai_diagnosis.clear_fallback_api_key)"
+              :placeholder="
+                emailConfig.ai_diagnosis.fallback_api_key_configured
+                  ? t('admin.ops.email.aiApiKeyPlaceholderReplace', { masked: emailConfig.ai_diagnosis.fallback_api_key_masked || '****' })
+                  : t('admin.ops.email.aiFallbackApiKeyPlaceholderNew')
+              "
+            />
+            <label
+              v-if="emailConfig.ai_diagnosis.fallback_api_key_configured"
+              class="mt-1.5 inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+            >
+              <input v-model="emailConfig.ai_diagnosis.clear_fallback_api_key" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" />
+              <span>{{ t('admin.ops.email.clearSavedKey') }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 私聊推送 Webhook（严禁群聊） -->
+      <div v-if="emailConfig.private_webhook" class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-700/50">
+        <div class="mb-3 flex items-start justify-between gap-4">
+          <div>
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.email.privateWebhookTitle') }}</h4>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.email.privateWebhookHint') }}</p>
+          </div>
+          <Toggle v-model="emailConfig.private_webhook.enabled" />
+        </div>
+
+        <div v-if="emailConfig.private_webhook.enabled || emailConfig.private_webhook.target" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="md:col-span-2">
+            <label class="input-label">{{ t('admin.ops.email.privateWebhookUrl') }}</label>
+            <input
+              v-model="emailConfig.private_webhook.url"
+              type="url"
+              class="input font-mono text-base sm:text-sm"
+              :placeholder="t('admin.ops.email.privateWebhookUrlPlaceholder')"
+            />
+          </div>
+          <div>
+            <label class="input-label">{{ t('admin.ops.email.privateWebhookTarget') }}</label>
+            <input
+              v-model="emailConfig.private_webhook.target"
+              type="text"
+              class="input font-mono text-base sm:text-sm"
+              :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500': privateTargetIsChatroom }"
+              :placeholder="t('admin.ops.email.privateWebhookTargetPlaceholder')"
+            />
+            <p v-if="privateTargetIsChatroom" class="mt-1 text-xs text-red-600 dark:text-red-400">
+              {{ t('admin.ops.email.validation.privateWebhookChatroomBlocked') }}
+            </p>
+          </div>
+          <div>
+            <div class="mb-1 flex items-center justify-between gap-2 text-xs font-medium text-gray-600 dark:text-gray-300">
+              <span>{{ t('admin.ops.email.privateWebhookToken') }}</span>
+              <span
+                v-if="emailConfig.private_webhook.token_configured && !emailConfig.private_webhook.clear_token"
+                class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+              >
+                {{ t('admin.ops.email.secretConfigured') }} ({{ emailConfig.private_webhook.token_masked || '****' }})
+              </span>
+            </div>
+            <input
+              v-model="emailConfig.private_webhook.bearer_token"
+              type="password"
+              autocomplete="new-password"
+              class="input font-mono text-base sm:text-sm"
+              :disabled="Boolean(emailConfig.private_webhook.clear_token)"
+              :placeholder="
+                emailConfig.private_webhook.token_configured
+                  ? t('admin.ops.email.privateWebhookTokenPlaceholderReplace', { masked: emailConfig.private_webhook.token_masked || '****' })
+                  : ''
+              "
+            />
+            <label
+              v-if="emailConfig.private_webhook.token_configured"
+              class="mt-1.5 inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+            >
+              <input v-model="emailConfig.private_webhook.clear_token" type="checkbox" class="h-3.5 w-3.5 rounded border-gray-300" />
+              <span>{{ t('admin.ops.email.clearSavedKey') }}</span>
+            </label>
+          </div>
+          <div class="md:col-span-2 flex items-center justify-between">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.email.privateWebhookIncludeReports') }}</label>
+            <Toggle v-model="emailConfig.private_webhook.include_reports" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 评估报告配置 -->
+      <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-700/50">
+        <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.settings.reportConfig') }}</h4>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="font-medium text-gray-900 dark:text-white">{{ t('admin.ops.settings.enableReport') }}</label>
+            </div>
+            <Toggle v-model="emailConfig.report.enabled" />
+          </div>
+
+          <div v-if="emailConfig.report.enabled">
+            <label class="input-label">{{ t('admin.ops.settings.reportRecipients') }}</label>
+            <div class="flex gap-2">
+              <input
+                v-model="reportRecipientInput"
+                type="email"
+                class="input"
+                :placeholder="t('admin.ops.settings.emailPlaceholder')"
+                @keydown.enter.prevent="addRecipient('report')"
+              />
+              <button class="btn btn-secondary whitespace-nowrap" type="button" @click="addRecipient('report')">
+                {{ t('common.add') }}
+              </button>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span
+                v-for="email in emailConfig.report.recipients"
+                :key="email"
+                class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+              >
+                {{ email }}
+                <button type="button" class="text-blue-700/80 hover:text-blue-900" @click="removeRecipient('report', email)">×</button>
+              </span>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.ops.settings.recipientsHint') }}
+            </p>
+          </div>
+
+          <div v-if="emailConfig.report.enabled" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.dailySummary') }}</label>
+              <Toggle v-model="emailConfig.report.daily_summary_enabled" />
+            </div>
+            <div v-if="emailConfig.report.daily_summary_enabled">
+              <input v-model="emailConfig.report.daily_summary_schedule" type="text" class="input" placeholder="0 9 * * *" />
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.weeklySummary') }}</label>
+              <Toggle v-model="emailConfig.report.weekly_summary_enabled" />
+            </div>
+            <div v-if="emailConfig.report.weekly_summary_enabled">
+              <input v-model="emailConfig.report.weekly_summary_schedule" type="text" class="input" placeholder="0 9 * * 1" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 指标阈值配置 -->
+      <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-700/50">
+        <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.settings.metricThresholds') }}</h4>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.settings.metricThresholdsHint') }}</p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="input-label">{{ t('admin.ops.settings.slaMinPercent') }}</label>
+            <input
+              v-model.number="metricThresholds.sla_percent_min"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="input"
+            />
+            <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.slaMinPercentHint') }}</p>
+          </div>
+
+
+          <div>
+            <label class="input-label">{{ t('admin.ops.settings.ttftP99MaxMs') }}</label>
+            <input
+              v-model.number="metricThresholds.ttft_p99_ms_max"
+              type="number"
+              min="0"
+              step="50"
+              class="input"
+            />
+            <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.ttftP99MaxMsHint') }}</p>
+          </div>
+
+          <div>
+            <label class="input-label">{{ t('admin.ops.settings.requestErrorRateMaxPercent') }}</label>
+            <input
+              v-model.number="metricThresholds.request_error_rate_percent_max"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="input"
+            />
+            <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.requestErrorRateMaxPercentHint') }}</p>
+          </div>
+
+          <div>
+            <label class="input-label">{{ t('admin.ops.settings.upstreamErrorRateMaxPercent') }}</label>
+            <input
+              v-model.number="metricThresholds.upstream_error_rate_percent_max"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="input"
+            />
+            <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.upstreamErrorRateMaxPercentHint') }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 高级设置 -->
+      <details class="rounded-2xl bg-gray-50 dark:bg-dark-700/50">
+        <summary class="cursor-pointer p-4 text-sm font-semibold text-gray-900 dark:text-white">
+          {{ t('admin.ops.settings.advancedSettings') }}
+        </summary>
+        <div class="space-y-4 px-4 pb-4">
+          <!-- 数据保留策略 -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.dataRetention') }}</h5>
+
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.enableCleanup') }}</label>
+              <Toggle v-model="advancedSettings.data_retention.cleanup_enabled" />
+            </div>
+
+            <div v-if="advancedSettings.data_retention.cleanup_enabled">
+              <label class="input-label">{{ t('admin.ops.settings.cleanupSchedule') }}</label>
+              <input
+                v-model="advancedSettings.data_retention.cleanup_schedule"
+                type="text"
+                class="input"
+                placeholder="0 2 * * *"
+              />
+              <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.cleanupScheduleHint') }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <label class="input-label">{{ t('admin.ops.settings.errorLogRetentionDays') }}</label>
+                <input
+                  v-model.number="advancedSettings.data_retention.error_log_retention_days"
+                  type="number"
+                  min="0"
+                  max="365"
+                  class="input"
+                />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.ops.settings.minuteMetricsRetentionDays') }}</label>
+                <input
+                  v-model.number="advancedSettings.data_retention.minute_metrics_retention_days"
+                  type="number"
+                  min="0"
+                  max="365"
+                  class="input"
+                />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.ops.settings.hourlyMetricsRetentionDays') }}</label>
+                <input
+                  v-model.number="advancedSettings.data_retention.hourly_metrics_retention_days"
+                  type="number"
+                  min="0"
+                  max="365"
+                  class="input"
+                />
+              </div>
+            </div>
+            <p class="text-xs text-gray-500">{{ t('admin.ops.settings.retentionDaysHint') }}</p>
+          </div>
+
+          <!-- 预聚合任务 -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.aggregation') }}</h5>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.enableAggregation') }}</label>
+                <p class="mt-1 text-xs text-gray-500">{{ t('admin.ops.settings.aggregationHint') }}</p>
+              </div>
+              <Toggle v-model="advancedSettings.aggregation.aggregation_enabled" />
+            </div>
+          </div>
+
+          <!-- OpenAI 账号配额自动暂停（全局默认阈值） -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.openaiQuotaAutoPause') }}</h5>
+            <p class="text-xs text-gray-500">{{ t('admin.ops.settings.openaiQuotaAutoPauseHint') }}</p>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="input-label">{{ t('admin.ops.settings.openaiQuotaAutoPauseDefault5h') }}</label>
+                <input
+                  v-model.number="quotaAutoPause5hPercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  class="input"
+                  data-testid="ops-quota-auto-pause-5h"
+                />
+              </div>
+              <div>
+                <label class="input-label">{{ t('admin.ops.settings.openaiQuotaAutoPauseDefault7d') }}</label>
+                <input
+                  v-model.number="quotaAutoPause7dPercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  class="input"
+                  data-testid="ops-quota-auto-pause-7d"
+                />
+              </div>
+            </div>
+            <p class="text-xs text-gray-500">{{ t('admin.ops.settings.openaiQuotaAutoPauseThresholdHint') }}</p>
+          </div>
+
+          <!-- Error Filtering -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.errorFiltering') }}</h5>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.ignoreCountTokensErrors') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.ignoreCountTokensErrorsHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.ignore_count_tokens_errors" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.ignoreContextCanceled') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.ignoreContextCanceledHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.ignore_context_canceled" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.ignoreNoAvailableAccounts') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.ignoreNoAvailableAccountsHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.ignore_no_available_accounts" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.ignoreInsufficientBalanceErrors') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.ignoreInsufficientBalanceErrorsHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.ignore_insufficient_balance_errors" />
+            </div>
+          </div>
+
+          <!-- Auto Refresh -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.autoRefresh') }}</h5>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.enableAutoRefresh') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.enableAutoRefreshHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.auto_refresh_enabled" />
+            </div>
+
+            <div v-if="advancedSettings.auto_refresh_enabled">
+              <label class="input-label">{{ t('admin.ops.settings.refreshInterval') }}</label>
+              <Select
+                v-model="advancedSettings.auto_refresh_interval_seconds"
+                :options="[
+                  { value: 15, label: t('admin.ops.settings.refreshInterval15s') },
+                  { value: 30, label: t('admin.ops.settings.refreshInterval30s') },
+                  { value: 60, label: t('admin.ops.settings.refreshInterval60s') }
+                ]"
+              />
+            </div>
+          </div>
+
+          <!-- Dashboard Cards -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.dashboardCards') }}</h5>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.displayAlertEvents') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.displayAlertEventsHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.display_alert_events" />
+            </div>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.displayOpenAITokenStats') }}</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.displayOpenAITokenStatsHint') }}
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.display_openai_token_stats" />
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <button class="btn btn-secondary" @click="emit('close')">{{ t('common.cancel') }}</button>
+        <button class="btn btn-primary" :disabled="loading || !settingsLoaded || saving || !validation.valid" @click="saveAllSettings">
+          {{ saving ? t('common.saving') : t('common.save') }}
+        </button>
+      </div>
+    </template>
+  </BaseDialog>
+</template>
